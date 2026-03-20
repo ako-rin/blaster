@@ -1,0 +1,172 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/PlayerController.h"
+#include "BlasterPlayerController.generated.h"
+
+class UInputMappingContext;
+
+/**
+ * Player Controller for the Third Person Game
+ */
+UCLASS()
+class BLASTER_API ABlasterPlayerController : public APlayerController
+{
+	GENERATED_BODY()
+
+protected:
+	virtual void SetupInputComponent() override;
+	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
+	virtual void ReceivedPlayer() override; // 最早可获取时间 Sync with server clock as soon as possible
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void OnPossess(APawn* InPawn) override;
+
+	virtual void OnRep_Pawn() override;
+
+public:
+	void SetHUDHealth(float Health, float MaxHealth);
+	void SetHUDShield(float Shield, float MaxShield);
+	void SetHUDGrenadeCooldown(float ThrowCooldownTime, float ThrowMaxCooldownTime);
+	void SetHUDScore(float Score);
+	void SetHUDDefeats(int32 Defeats);
+	void SetHUDAmmo(int32 Ammo);
+	void SetHUDCarriedAmmo(int32 Ammo);
+	void SetHUDMatchCountdown(float CountdownTime);
+	void SetHUDAnnouncementCountdown(float CountdownTime);
+
+	void UpdateHUDGrenadeCooldown();
+	void StartGrenadeCooldown(float StartTime);
+
+	// 处理玩家加入游戏时，需要处理的逻辑
+	// 玩家有可能在游戏开始阶段加入，也有可能在热身阶段加入
+	void OnMatchStateSet(FName State);
+
+	void PollInit();
+
+	/**
+	 * Default actions
+	 */
+	void RemoveDefaultActions();
+	void AddDefaultActions();
+
+	/**
+	 * Sync Server Time
+	 */
+	virtual float GetServerTime(); //Sync with server world clock
+
+	/**
+	 * Gamemode State
+	 */
+	UFUNCTION()
+	void OnRep_MatchState();
+
+protected:
+	/**
+	 * Get Sync Server Time and Transform the Time to SetHUDMatchCountdown()
+	 */
+	void SetHUDTime();
+
+	/**
+	 * Sync time between client and server
+	 */
+	// Reports the current server time, passing in the client's time when the request was sent
+	UFUNCTION(Server, Reliable)
+	void ServerRequestServerTime(float TImeOfClientRequest);
+
+	// Reports the current server time to the client in response to ServerRequestServerTime
+	UFUNCTION(Client, Reliable)
+	void ClientReportServerTime(float TimeOfClientRequest, float TimeServerReceivedClientRequest);
+
+	// Tick
+	void CheckTimeSync(float DeltaSeconds);
+
+	UFUNCTION(Server, Reliable)
+	void ServerCheckMatchState();
+	
+	UFUNCTION(Client, Reliable)
+	void ClientJoinMidgame(FName StateOfMatch, float Warmup, float Match, float Cooldown, float StartingTime);
+
+private:
+
+	void HandleMatchHasStarted();
+	void HandleCooldown();
+	
+protected:
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputMappingContext> DefaultMappingContexts;
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputMappingContext> MouseLookMappingContexts;
+
+	/**
+	 * Sync Server Time
+	 */
+	float ClientServerDelta = 0.f; // Difference between server and client
+
+	UPROPERTY(EditAnywhere, Category = Time, DisplayName = "间隔同步服务器的时间")
+	float TimeSyncFrequency = 5.f;
+
+	float TimeSyncRunningTime = 0.f;
+	
+private:
+	UPROPERTY()
+	class ABlasterHUD* BlasterHUD;
+
+	UPROPERTY()
+	class ABlasterGameMode* BlasterGameMode;
+
+	UPROPERTY()
+	class UCharacterOverlay* CharacterOverlay;
+
+	/**
+	 * Enhanced Input
+	 */
+	UPROPERTY()
+	class UEnhancedInputLocalPlayerSubsystem* InputSubsystem;
+	
+	/**
+	 * Match Time Countdown
+	 */
+	float MatchTime = 0.f;
+	float WarmupTime = 0.f;
+	float LevelStartingTime = 0.f;
+	float CooldownTime = 0.f;
+	uint32 CountdownInt = 0;
+
+	/**
+	 * Game State
+	 */
+	UPROPERTY(ReplicatedUsing = OnRep_MatchState)
+	FName MatchState;
+
+	/**
+	 * Overlay
+	 */
+	bool bInitializeHealth = false;
+	bool bInitializeGrenade = false;
+	bool bInitializeScore = false;
+	bool bInitializeDefeats = false;
+	bool bInitializeAmmo = false;
+	bool bInitializeCarriedAmmo = false;
+	bool bInitializeShield = false;
+	float HUDHealth;
+	float HUDMaxHealth;
+	float HUDShield;
+	float HUDMaxShield;
+	float HUDGrenadeCooldownTime;
+	float HUDMaxGrenadeCooldownTime;
+	float HUDScore;
+	int32 HUDDefeats;
+	int32 HUDAmmo;
+	int32 HUDCarriedAmmo;
+
+	/**
+	 * Update Throw Grenade Time
+	 */
+	bool bCheckGrenadeCooldown = false;
+	float HUDGrenadeStartTime = 0.f;
+};
+
