@@ -7,6 +7,8 @@
 #include "Weapon/WeaponTypes.h"
 #include "PickupData.generated.h"
 
+class USoundCue;
+
 UENUM()
 enum class EPickupType : uint8
 {

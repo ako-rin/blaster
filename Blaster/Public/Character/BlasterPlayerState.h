@@ -18,13 +18,13 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	
 	virtual void OnRep_Score() override;
+	
 	UFUNCTION()
 	void OnRep_Defeats();
 	
 	void AddToScore(float ScoreAmount);
 	void AddToDefeats(int32 DefeatsAmount);
 
-protected:
 	FORCEINLINE int32 GetDefeats() const {return Defeats;}
 	FORCEINLINE void SetDefeats(int32 Defeat) {Defeats = Defeat;}
 

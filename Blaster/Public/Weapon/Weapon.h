@@ -8,6 +8,7 @@
 #include "Weapon.generated.h"
 
 class USphereComponent;
+class USoundCue;
 
 UENUM(BlueprintType)
 enum class EWeaponState : uint8

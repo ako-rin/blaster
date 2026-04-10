@@ -116,14 +116,20 @@ void UCombatComponent::AttachActorToBackpack(AActor* ActorToAttach)
 	}
 }
 
+int32 UCombatComponent::GetCarriedAmmoFromAmmoMap()
+{
+	if (EquippedWeapon && CarriedAmmoMap.Contains(EquippedWeapon->GetWeaponType()))
+	{
+		CarriedAmmo = CarriedAmmoMap[EquippedWeapon->GetWeaponType()];
+	}
+	return CarriedAmmo;
+}
+
 // Updating Carried Ammo and Updating Carried Ammo HUD
 void UCombatComponent::UpdateCarriedAmmo()
 {
 	if (!EquippedWeapon) return;
-	if (CarriedAmmoMap.Contains(EquippedWeapon->GetWeaponType()))
-	{
-		CarriedAmmo = CarriedAmmoMap[EquippedWeapon->GetWeaponType()];
-	}
+	GetCarriedAmmoFromAmmoMap();
 	
 	Controller = Controller == nullptr ? Cast<ABlasterPlayerController>(Character->GetController()) : Controller;
 	if (Controller)

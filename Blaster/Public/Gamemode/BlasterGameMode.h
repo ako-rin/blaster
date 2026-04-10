@@ -18,9 +18,7 @@ class BLASTER_API ABlasterGameMode : public AGameMode
 
 public:
 	ABlasterGameMode();
-	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
-	virtual void OnMatchStateSet() override;
 	virtual void PlayerEliminated(class ABlasterCharacter* ElimmedCharacter, class ABlasterPlayerController* VictimController, ABlasterPlayerController* AttackerController);
 	virtual void RequestSpawn(class ACharacter* ElimmedCharacter, class AController* ElimmedController);
 
@@ -30,7 +28,11 @@ public:
 	FORCEINLINE float GetLevelStartingTime() const {return LevelStartingTime;}
 	FORCEINLINE float GetCountdownTime() const {return CountdownTime;}
 
-
+protected:
+	virtual void BeginPlay() override;
+	virtual void OnMatchStateSet() override;
+	
+	
 private:
 	float CountdownTime = 0.f;
 

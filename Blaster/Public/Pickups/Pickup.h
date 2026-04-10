@@ -18,10 +18,10 @@ public:
 	APickup();
 	virtual void Tick(float DeltaTime) override;
 	virtual void Destroyed() override;
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
 protected:
 	virtual void BeginPlay() override;
-	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION()
 	virtual void OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult);
@@ -75,6 +75,6 @@ protected:
 	class UStaticMeshComponent* PickupMesh;
 
 	UPROPERTY(EditAnywhere, Category = "Pickup")
-	USoundCue* PickupSound;
+	class USoundCue* PickupSound;
 
 };

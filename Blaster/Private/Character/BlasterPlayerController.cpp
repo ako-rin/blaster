@@ -15,6 +15,7 @@
 #include "HUD/Announcement.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameState/BlasterGameState.h"
+#include "Weapon/Weapon.h"
 
 void ABlasterPlayerController::BeginPlay()
 {
@@ -41,6 +42,24 @@ void ABlasterPlayerController::Tick(float DeltaSeconds)
 	if (bCheckGrenadeCooldown)
 	{
 		UpdateHUDGrenadeCooldown();
+	}
+	
+	if (HasAuthority()) 
+	{
+		BlasterHUD = Cast<ABlasterHUD>(GetHUD());
+		if (BlasterHUD)
+		{
+			// 如果处于等待状态，但公告板没建出来，强行建！
+			if (MatchState == MatchState::WaitingToStart && BlasterHUD->GetAnnouncement() == nullptr)
+			{
+				BlasterHUD->AddAnnouncement();
+			}
+			// 如果处于游戏中，但血条面板没建出来，强行建！
+			else if (MatchState == MatchState::InProgress && BlasterHUD->GetCharacterOverlay() == nullptr)
+			{
+				HandleMatchHasStarted();
+			}
+		}
 	}
 }
 
@@ -81,11 +100,23 @@ void ABlasterPlayerController::OnPossess(APawn* InPawn)
 	if (ABlasterCharacter* BlasterCharacter = Cast<ABlasterCharacter>(InPawn))
 	{
 		SetHUDHealth(BlasterCharacter->GetHealth(), BlasterCharacter->GetMaxHealth());
+		SetHUDShield(BlasterCharacter->GetShield(), BlasterCharacter->GetMaxShield());
 		
 		if (BlasterCharacter->GetCombat())
 		{
 			HUDMaxGrenadeCooldownTime = BlasterCharacter->GetCombat()->GetGrenadeMaxCooldownTime();
 			SetHUDGrenadeCooldown(HUDMaxGrenadeCooldownTime, HUDMaxGrenadeCooldownTime);
+			
+			if (BlasterCharacter->GetCombat()->EquippedWeapon)
+			{
+				SetHUDAmmo(BlasterCharacter->GetCombat()->EquippedWeapon->GetCurrentAmmo());
+				SetHUDCarriedAmmo(BlasterCharacter->GetCombat()->GetCarriedAmmoFromAmmoMap());
+			}
+		}
+		if (ABlasterPlayerState* BlasterPlayerState = GetPlayerState<ABlasterPlayerState>())
+		{
+			SetHUDScore(BlasterPlayerState->GetScore());
+			SetHUDDefeats(BlasterPlayerState->GetDefeats());
 		}
 
 		if (IsLocalController())
@@ -364,7 +395,7 @@ void ABlasterPlayerController::SetHUDTime()
 			SetHUDAnnouncementCountdown(TimeLeft);
 		}
 		if (MatchState == MatchState::InProgress)
-		{
+                          		{
 			SetHUDMatchCountdown(TimeLeft);
 		}
 		
@@ -378,12 +409,23 @@ void ABlasterPlayerController::OnMatchStateSet(FName State)
 {
 	MatchState = State;
 
+	if (HasAuthority() && MatchState == MatchState::WaitingToStart)
+	{
+		if (ABlasterGameMode* GameMode = Cast<ABlasterGameMode>(UGameplayStatics::GetGameMode(this)))
+		{
+			WarmupTime = GameMode->GetWarmupTime();
+			MatchTime = GameMode->GetMatchTime();
+			LevelStartingTime = GameMode->GetLevelStartingTime();
+			CooldownTime = GameMode->GetCooldownTime();
+		}
+	}
+	
 	if (MatchState == MatchState::WaitingToStart)
 	{
 		
 	}
 
-	if (MatchState == MatchState::InProgress)
+	else if (MatchState == MatchState::InProgress)
 	{
 		HandleMatchHasStarted();
 	}
@@ -407,7 +449,8 @@ void ABlasterPlayerController::OnRep_MatchState()
 
 void ABlasterPlayerController::HandleMatchHasStarted()
 {
-	BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
+	// BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
+	BlasterHUD = Cast<ABlasterHUD>(GetHUD());
 	if (BlasterHUD)
 	{
 		BlasterHUD->AddCharacterOverlay();
@@ -420,10 +463,14 @@ void ABlasterPlayerController::HandleMatchHasStarted()
 
 void ABlasterPlayerController::HandleCooldown()
 {
-	BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
+	// BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
+	BlasterHUD = Cast<ABlasterHUD>(GetHUD());
 	if (BlasterHUD)
 	{
-		BlasterHUD->GetCharacterOverlay()->RemoveFromParent();
+		if (BlasterHUD->GetCharacterOverlay())
+		{
+			BlasterHUD->GetCharacterOverlay()->RemoveFromParent();
+		}
 		bool bHUDValid = BlasterHUD->GetAnnouncement() &&
 			BlasterHUD->GetAnnouncement()->AnnouncementText &&
 				BlasterHUD->GetAnnouncement()->InfoText;

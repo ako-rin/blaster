@@ -16,15 +16,18 @@ class BLASTER_API ABlasterPlayerController : public APlayerController
 {
 	GENERATED_BODY()
 
-protected:
-	virtual void SetupInputComponent() override;
-	virtual void BeginPlay() override;
+public:
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void ReceivedPlayer() override; // 最早可获取时间 Sync with server clock as soon as possible
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void OnRep_Pawn() override;
+	
+	
+protected:
+	virtual void SetupInputComponent() override;
+	virtual void BeginPlay() override;
 	virtual void OnPossess(APawn* InPawn) override;
 
-	virtual void OnRep_Pawn() override;
 
 public:
 	void SetHUDHealth(float Health, float MaxHealth);

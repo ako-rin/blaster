@@ -160,8 +160,6 @@ void APickup::InitializePickup(class UPickupData* NewData)
 	ApplyPickupData();
 
 	SetActorHiddenInGame(false);
-	SetActorEnableCollision(true);
-	if (OverlapSphere) OverlapSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 
 	if (PickupEffectComponent)
 	{
@@ -174,6 +172,10 @@ void APickup::InitializePickup(class UPickupData* NewData)
 	}
 
 	MulticastPickupRespawned();
+	
+	SetActorEnableCollision(true);
+	if (OverlapSphere) OverlapSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+
 }
 
 void APickup::DeactivatePickup()

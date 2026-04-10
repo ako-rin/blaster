@@ -18,6 +18,7 @@ class UCameraComponent;
 class UCombatComponent;
 class UBuffComponent;
 class UBlasterAnimInstance;
+class USoundCue;
 
 UCLASS()
 class BLASTER_API ABlasterCharacter : public ACharacter, public IInteractWithCrosshairsInterface
@@ -67,6 +68,8 @@ public:
 	
 	UFUNCTION()
 	void OnRep_Shield(float LastShield); // OnRep 复制比 RPC 更有效
+	
+	virtual void OnRep_PlayerState() override;
 
 	virtual void OnRep_ReplicatedMovement() override;
 	
@@ -90,6 +93,8 @@ public:
 	void UpdateHUDHealth();
 	void UpdateHUDShield();
 	void UpdateHUDAmmo();
+	void UpdateHUDScore();
+	void UpdateHUDDefeats();
 
 	// Poll for any relevant classes and initialize HUD
 	void PollInit();

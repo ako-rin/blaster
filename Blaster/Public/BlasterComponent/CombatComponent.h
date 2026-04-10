@@ -97,6 +97,8 @@ public:
 	 */
 	void EquipPrimaryWeapon(AWeapon* WeaponToEquip);
 	void EquipSecondaryWeapon(AWeapon* WeaponToEquip);
+	int32 GetCarriedAmmoFromAmmoMap();
+	
 	
 protected:
 	void DoAiming(bool bIsAiming);

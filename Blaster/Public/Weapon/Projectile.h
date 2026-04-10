@@ -6,6 +6,8 @@
 #include "GameFramework/Actor.h"
 #include "Projectile.generated.h"
 
+class USoundCue;
+
 UCLASS()
 class BLASTER_API AProjectile : public AActor
 {

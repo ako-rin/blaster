@@ -111,6 +111,7 @@ void ABlasterCharacter::BeginPlay()
 	// 因此在角色的 BeginPlay 中还要再调用一次
 	UpdateHUDHealth();
 	UpdateHUDShield();
+	
 	if (HasAuthority())
 	{
 		OnTakeAnyDamage.AddDynamic(this, &ThisClass::ReceiveDamage);
@@ -396,6 +397,13 @@ void ABlasterCharacter::OnRep_Shield(float LastShield)
 			AnimInstance->PlayHitReactMontage();
 		}
 	}
+}
+
+void ABlasterCharacter::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+	UpdateHUDScore();
+	UpdateHUDDefeats();
 }
 
 // Only moved, the function would be called
@@ -920,6 +928,27 @@ void ABlasterCharacter::UpdateHUDAmmo()
 	{
 		BlasterPlayerController->SetHUDCarriedAmmo(Combat->CarriedAmmo);
 		BlasterPlayerController->SetHUDAmmo(Combat->EquippedWeapon->GetCurrentAmmo());
+	}
+}
+
+void ABlasterCharacter::UpdateHUDScore()
+{
+	BlasterPlayerController = BlasterPlayerController == nullptr ? Cast<ABlasterPlayerController>(GetController()) : BlasterPlayerController;
+	BlasterPlayerState = BlasterPlayerState == nullptr ? GetPlayerState<ABlasterPlayerState>() : BlasterPlayerState;
+	
+	if (BlasterPlayerController && BlasterPlayerState)
+	{
+		BlasterPlayerController->SetHUDScore(BlasterPlayerState->GetScore());
+	}
+}
+
+void ABlasterCharacter::UpdateHUDDefeats()
+{
+	BlasterPlayerController = BlasterPlayerController == nullptr ? Cast<ABlasterPlayerController>(GetController()) : BlasterPlayerController;
+	BlasterPlayerState = BlasterPlayerState == nullptr ? GetPlayerState<ABlasterPlayerState>() : BlasterPlayerState;
+	if (BlasterPlayerController && BlasterPlayerState)
+	{
+		BlasterPlayerController->SetHUDDefeats(BlasterPlayerState->GetDefeats());
 	}
 }
 
