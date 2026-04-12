@@ -20,6 +20,16 @@ enum class EWeaponState : uint8
 	EWS_MAX UMETA(DisplayName = "MAX")
 };
 
+UENUM()
+enum class EFireType : uint8
+{
+	EFT_HitScan UMETA(DisplayName = "Hit Scan Weapon"),
+	EFT_Projectile UMETA(DisplayName = "Projectile Weapon"),
+	EFT_Shotgun UMETA(DisplayName = "Shotgun Weapon"),
+	
+	EFT_MAX UMETA(DisplayName = "Default MAX")
+};
+
 UCLASS()
 class BLASTER_API AWeapon : public AActor
 {
@@ -30,6 +40,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
+	FORCEINLINE bool IsUseScatter() const {return bUseScatter;}
 
 protected:
 	virtual void BeginPlay() override;
@@ -62,6 +73,8 @@ public:
 	FORCEINLINE void SetWeaponShouldDestroy(const bool& bEnable) {bDestroyWeapon = bEnable;}
 	FORCEINLINE bool ShouldDestroyWeapon() const {return bDestroyWeapon;}
 	
+	FORCEINLINE EFireType GetFireType() const {return FireType;}
+	
 	
 	virtual void Fire(const FVector& HitTarget);
 
@@ -81,6 +94,11 @@ public:
 	 * Enable or disable custom depth
 	 */
 	void EnableCustomDepth(bool bEnable);
+
+	/**
+	 * Scatter
+	 */
+	FVector TraceEndWithScatter(const FVector& HitTarget);
 	
 protected:
 	
@@ -118,6 +136,19 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Weapon Properties|Crosshair")
 	class UTexture2D* CrosshairsBottom;
 	
+protected:
+	
+	/**
+	 * Trace end with scatter
+	 */
+	UPROPERTY(EditAnywhere, Category = "Weapon Properties|Weapon Scatter")
+	float DistanceToSphere = 800.f;
+	
+	UPROPERTY(EditAnywhere, Category = "Weapon Properties|Weapon Scatter")
+	float SphereRadius = 75.f;
+
+	UPROPERTY(EditAnywhere, Category = "Weapon Properties|Weapon Scatter")
+	bool bUseScatter = false;
 	
 private:
 
@@ -172,6 +203,9 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Weapon Properties")
 	EWeaponType WeaponType;
+	
+	UPROPERTY(EditAnywhere, Category = "Weapon Properties")
+	EFireType FireType;
 
 	/**
 	 * Sound Effect
@@ -184,5 +218,4 @@ private:
 	 */
 	UPROPERTY(EditAnywhere, Category = "Weapon Properties")
 	bool bDestroyWeapon = false;
-
 };

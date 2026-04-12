@@ -68,7 +68,15 @@ public:
 	 */
 	UFUNCTION(NetMulticast, Unreliable)
 	void MultiCastFiring(bool bIsFiring, const FVector_NetQuantize& TraceHitResult); // Server and All Clients Call this
-
+	
+	UFUNCTION(Server, Reliable)
+	void ServerShotgunFiring(bool bIsFiring, const TArray<FVector_NetQuantize>& TraceHitResults);
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastShotgunFiring(bool bIsFiring, const TArray<FVector_NetQuantize>& TraceHitResults);
+	
+	
+	
 	/**
 	 * Reload
 	 */
@@ -104,6 +112,12 @@ protected:
 	void DoAiming(bool bIsAiming);
 	void DoWalking(bool bIsWalking);
 	void Fire();
+	void FireProjectileWeapon();
+	void FireHitScanWeapon();
+	void FireShotgun();
+	void LocalFire(bool bIsFiring, const FVector_NetQuantize& TraceHitTarget);
+	void ShotgunLocalFire(bool bIsFiring, const TArray<FVector_NetQuantize>& TraceHitTargets);
+	
 	void DoFiring(bool bIsFiring);
 	void DoReloading();
 	void DoThrowGrenade();

@@ -11,6 +11,10 @@
 #include "Character/BlasterAnimInstance.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Character/BlasterPlayerController.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "Weapon/WeaponTypes.h"
+#include "Engine/SkeletalMeshSocket.h"
+
 
 AWeapon::AWeapon()
 {
@@ -44,15 +48,11 @@ void AWeapon::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Only for Authority
-	if (HasAuthority())
-	{
-		AreaSphere->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-		AreaSphere->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
-		AreaSphere->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnSphereOverlap);
-		AreaSphere->OnComponentEndOverlap.AddDynamic(this,&ThisClass::OnSphereEndOverlap);
-	}
-
+	AreaSphere->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	AreaSphere->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	AreaSphere->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnSphereOverlap);
+	AreaSphere->OnComponentEndOverlap.AddDynamic(this,&ThisClass::OnSphereEndOverlap);
+	
 	if (PickupWidget)
 	{
 		PickupWidget->SetVisibility(false);
@@ -272,6 +272,26 @@ void AWeapon::OnRep_Ammo()
 		BlasterOwnerCharacter->GetAnimInstance()->PlayShotgunReloadEndMontage();
 	}
 	
+}
+
+FVector AWeapon::TraceEndWithScatter(const FVector& HitTarget)
+{
+	const USkeletalMeshSocket* MuzzleFlashSocket = GetWeaponMesh()->GetSocketByName(FName("Muzzle"));
+	if (MuzzleFlashSocket == nullptr) return FVector();
+	
+	const FTransform SocketTransform = MuzzleFlashSocket->GetSocketTransform(GetWeaponMesh());
+	const FVector TraceStart = SocketTransform.GetLocation();
+	
+	const FVector ToTargetNormalized = (HitTarget - TraceStart).GetSafeNormal();
+	const FVector SphereCenter = TraceStart + ToTargetNormalized * DistanceToSphere;
+	const FVector RandVec = UKismetMathLibrary::RandomUnitVector() * FMath::FRandRange(0.f, SphereRadius);
+	const FVector EndLoc = SphereCenter + RandVec;
+	const FVector ToEndLoc = EndLoc - TraceStart;
+
+	// DrawDebugSphere(GetWorld(), SphereCenter, SphereRadius, 25, FColor::Red, true);
+	// DrawDebugSphere(GetWorld(), EndLoc, 4.f, 12, FColor::Orange, true);
+	
+	return FVector(TraceStart + ToEndLoc * TRACE_LENGTH / ToEndLoc.Size());
 }
 
 

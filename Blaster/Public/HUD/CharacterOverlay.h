@@ -54,4 +54,10 @@ public:
 
 	UPROPERTY(meta = (BindWidget))
 	class UProgressBar* GrenadeProgressBar;
+	
+	UPROPERTY(meta = (BindWidget))
+	class UImage* HighPingIcon;
+	
+	UPROPERTY(meta = (BindWidgetAnim), Transient) // Transient 通知引擎不需要将该动画进行序列化，仅运行时绑定
+	UWidgetAnimation* HighPingAnimation;
 };

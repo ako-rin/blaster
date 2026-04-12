@@ -14,7 +14,7 @@
 #include "TimerManager.h"
 #include "Sound/SoundCue.h"
 #include "Weapon/Projectile.h"
-
+#include "Weapon/Shotgun.h"
 
 UCombatComponent::UCombatComponent()
 {
@@ -71,8 +71,8 @@ void UCombatComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty
 
 	DOREPLIFETIME(UCombatComponent, EquippedWeapon);
 	DOREPLIFETIME(UCombatComponent, SecondaryWeapon);
-	DOREPLIFETIME(UCombatComponent, bAiming);
-	DOREPLIFETIME(UCombatComponent, bWalking);
+	DOREPLIFETIME_CONDITION(UCombatComponent, bAiming, COND_SimulatedOnly);
+	DOREPLIFETIME_CONDITION(UCombatComponent, bWalking, COND_SimulatedOnly);
 	DOREPLIFETIME(UCombatComponent, CombatState);
 	DOREPLIFETIME_CONDITION(UCombatComponent, CarriedAmmo, COND_OwnerOnly); // only for client
 }
@@ -223,6 +223,7 @@ void UCombatComponent::EquipWeapon(class AWeapon* WeaponToEquip)
 
 void UCombatComponent::SwapWeapon()
 {
+	if (CombatState != ECombatState::ECS_Unoccupied) return;
 	AWeapon* TempWeapon = EquippedWeapon;
 	EquippedWeapon = SecondaryWeapon;
 	SecondaryWeapon = TempWeapon;
@@ -322,6 +323,7 @@ void UCombatComponent::OnRep_Aiming()
 	if (!EquippedWeapon)
 		return;
 	
+	UE_LOG(LogTemp, Warning, TEXT("OnRep_Aiming"));
 	UpdateMoveSpeed(); // for Simulate and Autonomous
 }
 
@@ -394,6 +396,61 @@ void UCombatComponent::ServerFiring_Implementation(bool bIsFiring, const FVector
 	}
 }
 
+
+void UCombatComponent::LocalFire(bool bIsFiring, const FVector_NetQuantize& TraceHitTarget)
+{
+	if (!EquippedWeapon) return;
+	
+	if (Character && bIsFiring && CombatState == ECombatState::ECS_Unoccupied) // 防止换弹时还能继续开枪
+	{
+		if (UBlasterAnimInstance* AnimInstance = Character->GetAnimInstance())
+		{
+			AnimInstance->PlayFireMontage();
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Can't get AnimInstance"));
+		}
+		EquippedWeapon->Fire(TraceHitTarget);
+	}
+}
+
+void UCombatComponent::ShotgunLocalFire(bool bIsFiring, const TArray<FVector_NetQuantize>& TraceHitTargets)
+{
+	AShotgun* Shotgun = Cast<AShotgun>(EquippedWeapon);
+	if (Shotgun == nullptr || Character == nullptr) return;
+	
+	if (CombatState == ECombatState::ECS_Reloading || CombatState == ECombatState::ECS_Unoccupied)
+	{
+		if (UBlasterAnimInstance* AnimInstance = Character->GetAnimInstance())
+		{
+			AnimInstance->PlayFireMontage();
+		}
+		Shotgun->FireShotgun(TraceHitTargets);
+		CombatState = ECombatState::ECS_Unoccupied;
+	}
+}
+
+void UCombatComponent::MultiCastFiring_Implementation(bool bIsFiring, const FVector_NetQuantize& TraceHitResult)
+{
+	if (Character && Character->IsLocallyControlled() && !Character->HasAuthority()) return;
+	LocalFire(bIsFiring, TraceHitResult);
+}
+
+void UCombatComponent::ServerShotgunFiring_Implementation(bool bIsFiring,
+	const TArray<FVector_NetQuantize>& TraceHitResults)
+{
+	MulticastShotgunFiring(bIsFiring, TraceHitResults);
+}
+
+void UCombatComponent::MulticastShotgunFiring_Implementation(bool bIsFiring,
+	const TArray<FVector_NetQuantize>& TraceHitResults)
+{
+	if (Character && Character->IsLocallyControlled() && !Character->HasAuthority()) return;
+	ShotgunLocalFire(bIsFiring, TraceHitResults);
+}
+
+
 void UCombatComponent::ServerReload_Implementation()
 {
 	if (!Character || !EquippedWeapon) return;
@@ -426,35 +483,6 @@ void UCombatComponent::ServerThrowGrenade_Implementation()
 	
 }
 
-void UCombatComponent::MultiCastFiring_Implementation(bool bIsFiring, const FVector_NetQuantize& TraceHitResult)
-{
-	if (!EquippedWeapon) return;
-
-	if (Character && Character->GetCombatState() == ECombatState::ECS_Reloading && EquippedWeapon->GetWeaponType() == EWeaponType::EWT_Shotgun)
-	{
-		if (UBlasterAnimInstance* AnimInstance = Character->GetAnimInstance())
-		{
-			AnimInstance->PlayFireMontage();
-		}
-		EquippedWeapon->Fire(TraceHitResult);
-		CombatState = ECombatState::ECS_Unoccupied;
-		return;
-	}
-	
-	if (Character && bIsFiring && CombatState == ECombatState::ECS_Unoccupied) // 防止换弹时还能继续开枪
-	{
-		if (UBlasterAnimInstance* AnimInstance = Character->GetAnimInstance())
-		{
-			AnimInstance->PlayFireMontage();
-		}
-		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Can't get AnimInstance"));
-		}
-		EquippedWeapon->Fire(TraceHitResult);
-	}
-}
-
 void UCombatComponent::ThrowGrenadeFinished()
 {
 	CombatState = ECombatState::ECS_Unoccupied;
@@ -484,8 +512,7 @@ void UCombatComponent::DoAiming(bool bIsAiming)
 	
 	bAiming = bIsAiming;
 	UpdateMoveSpeed();
-	
-	
+	UE_LOG(LogTemp, Warning, TEXT("Local Aiming"));
 	if (Character && !Character->HasAuthority())
 	{
 		ServerSetAiming(bIsAiming);
@@ -571,14 +598,62 @@ void UCombatComponent::Fire()
 	
 	bCanFire = false;
 	
+	switch (EquippedWeapon->GetFireType())
+	{
+	case EFireType::EFT_Projectile:
+		FireProjectileWeapon();
+		break;
+	case EFireType::EFT_HitScan:
+		FireHitScanWeapon();
+		break;
+	case EFireType::EFT_Shotgun:
+		FireShotgun();
+		break;
+	case EFireType::EFT_MAX:
+		break;
+	}
+	
 	// 通过 RPC 传输变量给服务器
-	ServerFiring(bFiring, HitTarget);
+	// ServerFiring(bFiring, HitTarget);
+	//
+	// LocalFire(bFiring, HitTarget);
 	
 	CrosshairFireFactor += 0.80f;
 	
 	StartFireTimer();
 }
 
+void UCombatComponent::FireProjectileWeapon()
+{
+	if (EquippedWeapon && Character)
+	{
+		HitTarget = EquippedWeapon->IsUseScatter() ? EquippedWeapon->TraceEndWithScatter(HitTarget) : HitTarget;
+	    if (!Character->HasAuthority()) LocalFire(bFiring, HitTarget);
+		ServerFiring(bFiring, HitTarget);
+	}
+}
+
+void UCombatComponent::FireHitScanWeapon()
+{
+	if (EquippedWeapon && Character)
+	{
+		HitTarget = EquippedWeapon->IsUseScatter() ? EquippedWeapon->TraceEndWithScatter(HitTarget) : HitTarget;
+		if (!Character->HasAuthority())	LocalFire(bFiring, HitTarget);
+		ServerFiring(bFiring, HitTarget);
+	}
+}
+
+void UCombatComponent::FireShotgun()
+{
+	AShotgun* Shotgun = Cast<AShotgun>(EquippedWeapon);
+	if (Shotgun && Character)
+	{
+		TArray<FVector_NetQuantize> HitTargets;
+		Shotgun->ShotgunTraceWithScatter(HitTarget, HitTargets);
+		if (!Character->HasAuthority()) ShotgunLocalFire(bFiring, HitTargets);
+		ServerShotgunFiring(bFiring, HitTargets);
+	}
+}
 
 // Play Reload Montage
 void UCombatComponent::HandleReload()
