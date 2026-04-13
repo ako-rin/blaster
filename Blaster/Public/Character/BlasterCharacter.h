@@ -131,6 +131,8 @@ public:
 	FORCEINLINE UStaticMeshComponent* GetAttachedGrenade() const {return AttachedGrenade;}
 
 	FORCEINLINE AWeapon* GetOverlappingWeapon() const {return OverlappingWeapon;}
+	
+	bool IsLocallyReloading() const;
 
 	UBlasterAnimInstance* GetAnimInstance() const;
 	

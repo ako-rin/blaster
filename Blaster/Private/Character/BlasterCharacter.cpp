@@ -756,6 +756,14 @@ void ABlasterCharacter::SetShield(const float& ReplenishShieldAmount)
 	Shield = FMath::Clamp(ReplenishShieldAmount + Shield, 0.f, MaxShield);
 }
 
+bool ABlasterCharacter::IsLocallyReloading() const
+{
+	if (Combat)
+	{
+		return Combat->IsLocallyReloading();
+	}
+}
+
 UBlasterAnimInstance* ABlasterCharacter::GetAnimInstance() const
 {
 	if (UBlasterAnimInstance* AnimInstance = Cast<UBlasterAnimInstance>(GetMesh()->GetAnimInstance()))

@@ -63,6 +63,8 @@ public:
 	FORCEINLINE float GetGrenadeMaxCooldownTime() const {return GrenadeCooldownTime;}
 	FORCEINLINE float GetLastThrowGrenadeTime() const {return LastThrowGrenadeTime;}
 	
+	FORCEINLINE bool IsLocallyReloading() const {return bLocallyReloading;}
+	
 	/***
 	 * MultiCast 广播给所有角色执行逻辑
 	 */
@@ -210,8 +212,12 @@ public:
 	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_SecondaryWeapon)
 	AWeapon* SecondaryWeapon;
 	
+	
 private:
 
+	// Control Fabric
+	bool bLocallyReloading = false;
+	
 	// Needn't to replicate, Button pressed
 	bool bFiring;
 	

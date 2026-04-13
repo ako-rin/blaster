@@ -354,7 +354,7 @@ void UCombatComponent::OnRep_CombatState()
 	switch (CombatState)
 	{
 	case ECombatState::ECS_Reloading:
-		HandleReload();
+		if (Character && !Character->IsLocallyControlled()) HandleReload();
 		break;
 	case ECombatState::ECS_Unoccupied:
 		if (bFiring)
@@ -472,8 +472,7 @@ void UCombatComponent::ServerReload_Implementation()
 	if (CarriedAmountAmmo <= 0) return;
 	
 	CombatState = ECombatState::ECS_Reloading;
-	HandleReload();
-	
+ 	if (!Character->IsLocallyControlled()) HandleReload();
 }
 
 void UCombatComponent::ServerShotGunReload_Implementation()
@@ -525,16 +524,18 @@ void UCombatComponent::DoAiming(bool bIsAiming)
 	if (!Character || !EquippedWeapon)
 		return;
 	
-	bAiming = bIsAiming;
-	UpdateMoveSpeed();
-	UE_LOG(LogTemp, Warning, TEXT("Local Aiming"));
-	if (Character && !Character->HasAuthority())
+	if (Character->IsLocallyControlled())
 	{
-		ServerSetAiming(bIsAiming);
-	}
-	if (Character->IsLocallyControlled() && EquippedWeapon->GetWeaponType() == EWeaponType::EWT_SniperRifle)
-	{
-		Character->ShowSniperScopeWidget(bIsAiming);
+		bAiming = bIsAiming;
+		UpdateMoveSpeed();
+		if (Character && !Character->HasAuthority())
+		{
+			ServerSetAiming(bIsAiming);
+		}
+		if (EquippedWeapon->GetWeaponType() == EWeaponType::EWT_SniperRifle)
+		{
+			Character->ShowSniperScopeWidget(bIsAiming);
+		}
 	}
 }
 
@@ -564,9 +565,12 @@ void UCombatComponent::DoReloading()
 	if (!EquippedWeapon)
 		return;
 
-	if (EquippedWeapon->GetMagCapacity() > EquippedWeapon->GetCurrentAmmo() && CarriedAmmo > 0 && CombatState == ECombatState::ECS_Unoccupied)
+	if (EquippedWeapon->GetMagCapacity() > EquippedWeapon->GetCurrentAmmo() && CarriedAmmo > 0 && CombatState == ECombatState::ECS_Unoccupied && !bLocallyReloading)
 	{
+		HandleReload();
 		ServerReload();
+		CombatState = ECombatState::ECS_Reloading;
+		bLocallyReloading = true;
 	}
 }
 
@@ -920,6 +924,8 @@ void UCombatComponent::FireTimerFinished()
 bool UCombatComponent::CanFire()
 {
 	if (!EquippedWeapon) return false;
+	
+	if (bLocallyReloading) return false;
 
 	if (!EquippedWeapon->IsEmptyAmmo() && bCanFire && CombatState == ECombatState::ECS_Reloading && EquippedWeapon->GetWeaponType() == EWeaponType::EWT_Shotgun)
 	{
@@ -963,6 +969,8 @@ int32 UCombatComponent::AmountToReload()
 void UCombatComponent::FinishReloading()
 {
 	if (!Character) return;
+	
+	bLocallyReloading = false;
 
 	if (Character->HasAuthority())
 	{
