@@ -70,7 +70,7 @@ void AWeapon::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLif
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AWeapon, WeaponState);
-	DOREPLIFETIME(AWeapon, Ammo);
+	// DOREPLIFETIME(AWeapon, Ammo);
 }
 
 void AWeapon::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -140,6 +140,60 @@ void AWeapon::SpendRound()
 {
 	Ammo = FMath::Clamp(Ammo - 1, 0, MagCapacity);
 	SetHUDAmmo();
+	
+	if (HasAuthority())
+	{
+		ClientUpdateAmmo(Ammo);
+	}
+	else
+	{
+		++Sequence;
+	}
+}
+
+void AWeapon::ClientUpdateAmmo_Implementation(int32 ServerAmmo)
+{
+	if (HasAuthority()) return;
+	Ammo = ServerAmmo;
+	--Sequence;
+	Ammo -= Sequence;
+	SetHUDAmmo();
+}
+
+// AddAmmo 在服务端中执行
+// 权威来决定换多少子弹。AmmoToAdd 是权威传过来的值，肯定小于或等于客户端此刻打出去的子弹
+// 如果直接把 AmmoToAdd 传给客户端，最后可能在客户端中弹夹中的子弹数量少于弹夹应装子弹数
+void AWeapon::AddAmmo(int32 AmmoToAdd)
+{
+	Ammo = FMath::Clamp(Ammo + AmmoToAdd, 0, MagCapacity);
+	SetHUDAmmo();
+	ClientAddAmmo(Ammo);
+}
+
+void AWeapon::ClientAddAmmo_Implementation(int32 ServerAmmo)
+{
+	if (HasAuthority()) return;
+	
+	Ammo = ServerAmmo;
+	Sequence = 0;
+	
+	// Ammo = FMath::Clamp(Ammo + AmmoToAdd, 0, MagCapacity);
+	
+	BlasterOwnerCharacter = BlasterOwnerCharacter == nullptr ? Cast<ABlasterCharacter>(GetOwner()) : BlasterOwnerCharacter;
+	if (BlasterOwnerCharacter && BlasterOwnerCharacter->GetCombat() && IsFull())
+	{
+		bool bIsShotgun = WeaponType == EWeaponType::EWT_Shotgun;
+		bool bShouldEndReload = IsFull() || BlasterOwnerCharacter->GetCombat()->GetCarriedAmmo() == 0;
+		
+		if (bIsShotgun && bShouldEndReload)
+		{
+			if (UBlasterAnimInstance* AnimInstance = Cast<UBlasterAnimInstance>(BlasterOwnerCharacter->GetAnimInstance()))
+			{
+				AnimInstance->PlayShotgunReloadEndMontage();
+			}
+		}
+	}
+	SetHUDAmmo();
 }
 
 bool AWeapon::IsEmptyAmmo()
@@ -150,12 +204,6 @@ bool AWeapon::IsEmptyAmmo()
 bool AWeapon::IsFull()
 {
 	return Ammo == MagCapacity;
-}
-
-void AWeapon::AddAmmo(int32 AmmoToAdd)
-{
-	Ammo = FMath::Clamp(Ammo - AmmoToAdd, 0, MagCapacity);
-	SetHUDAmmo();
 }
 
 void AWeapon::EnableCustomDepth(bool bEnable)
@@ -261,18 +309,18 @@ void AWeapon::OnRep_WeaponState()
 	OnWeaponStateSet();
 }
 
-void AWeapon::OnRep_Ammo()
-{
-	SetHUDAmmo();
-
-	if (!BlasterOwnerCharacter || !BlasterOwnerCharacter->GetAnimInstance()) return;
-	
-	if (WeaponType == EWeaponType::EWT_Shotgun && (IsFull() || BlasterOwnerCharacter->GetCombat()->GetCarriedAmmo() == 0))
-	{
-		BlasterOwnerCharacter->GetAnimInstance()->PlayShotgunReloadEndMontage();
-	}
-	
-}
+// void AWeapon::OnRep_Ammo()
+// {
+// 	SetHUDAmmo();
+//
+// 	if (!BlasterOwnerCharacter || !BlasterOwnerCharacter->GetAnimInstance()) return;
+// 	
+// 	if (WeaponType == EWeaponType::EWT_Shotgun && (IsFull() || BlasterOwnerCharacter->GetCombat()->GetCarriedAmmo() == 0))
+// 	{
+// 		BlasterOwnerCharacter->GetAnimInstance()->PlayShotgunReloadEndMontage();
+// 	}
+// 	
+// }
 
 FVector AWeapon::TraceEndWithScatter(const FVector& HitTarget)
 {

@@ -89,6 +89,12 @@ public:
 	bool IsEmptyAmmo();
 	bool IsFull();
 	void AddAmmo(int32 AmmoToAdd);
+	
+	UFUNCTION(Client, Reliable)
+	void ClientUpdateAmmo(int32 ServerAmmo);
+	
+	UFUNCTION(Client, Reliable)
+	void ClientAddAmmo(int32 ServerAmmo);
 
 	/**
 	 * Enable or disable custom depth
@@ -111,11 +117,16 @@ protected:
 	UFUNCTION()
 	void OnRep_WeaponState();
 
-	UFUNCTION()
-	void OnRep_Ammo();
+	// 使用客户端预测，而不从服务端复制过来
+	// UFUNCTION()
+	// void OnRep_Ammo();
 
 
 public:
+	
+	// The number of unprocessed server requests for ammo.
+	// Incremented in SpendRound, decremented in ClientUpdateAmmo
+	int32 Sequence = 0;
 	
 	/**
 	 * Textures for the weapon crosshairs
@@ -188,7 +199,7 @@ private:
 	/**
 	 * Ammo
 	 */
-	UPROPERTY(EditAnywhere, ReplicatedUsing = OnRep_Ammo, Category = "Weapon Properties|Ammo")
+	UPROPERTY(EditAnywhere, Category = "Weapon Properties|Ammo")
 	int32 Ammo = 0;
 
 	UPROPERTY(EditAnywhere, Category = "Weapon Properties|Ammo")

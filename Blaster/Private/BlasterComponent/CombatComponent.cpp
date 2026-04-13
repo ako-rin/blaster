@@ -456,6 +456,21 @@ void UCombatComponent::ServerReload_Implementation()
 	if (!Character || !EquippedWeapon) return;
 	
 	// Reload
+	
+	// 服务端不在空闲状态不给换弹
+	if (CombatState != ECombatState::ECS_Unoccupied) return;
+	
+	// 服务端当前弹夹子弹已满不给换弹
+	if (EquippedWeapon->GetCurrentAmmo() >= EquippedWeapon->GetMagCapacity()) return;
+	
+	// 服务端备弹为0时不给换弹
+	int32 CarriedAmountAmmo = 0;
+	if (CarriedAmmoMap.Contains(EquippedWeapon->GetWeaponType()))
+	{
+		CarriedAmountAmmo = CarriedAmmoMap[EquippedWeapon->GetWeaponType()];
+	}
+	if (CarriedAmountAmmo <= 0) return;
+	
 	CombatState = ECombatState::ECS_Reloading;
 	HandleReload();
 	
@@ -682,7 +697,7 @@ void UCombatComponent::UpdateAmmoValues()
 	{
 		Controller->SetHUDCarriedAmmo(CarriedAmmo);
 	}
-	EquippedWeapon->AddAmmo(-ReloadAmount);
+	EquippedWeapon->AddAmmo(ReloadAmount);
 }
 
 void UCombatComponent::UpdateShotGunAmmoValues()
@@ -699,7 +714,7 @@ void UCombatComponent::UpdateShotGunAmmoValues()
 	{
 		Controller->SetHUDCarriedAmmo(CarriedAmmo);
 	}
-	EquippedWeapon->AddAmmo(-1);
+	EquippedWeapon->AddAmmo(1);
 
 	bCanFire = true; // 不需要经过完全的时间才能开枪
 	

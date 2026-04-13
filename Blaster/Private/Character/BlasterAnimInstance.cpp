@@ -224,7 +224,7 @@ void UBlasterAnimInstance::PlayShotgunReloadEndMontage()
 {
 	if (!BlasterCharacter) return;
 
-	if (ElimMontage)
+	if (ReloadMontage)
 	{
 		Montage_Play(ReloadMontage);
 		Montage_JumpToSection(FName("ShotgunEnd"));
