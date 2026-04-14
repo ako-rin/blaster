@@ -2,9 +2,12 @@
 
 
 #include "Weapon/HitScanWeapon.h"
+
+#include "BlasterComponent/LagCompensationComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMeshSocket.h"
 #include "Character/BlasterCharacter.h"
+#include "Character/BlasterPlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "Particles/ParticleSystemComponent.h"
 #include "Sound/SoundCue.h"
@@ -31,15 +34,33 @@ void AHitScanWeapon::Fire(const FVector& HitTarget)
 
 		if (ABlasterCharacter* BlasterCharacter = Cast<ABlasterCharacter>(FireHit.GetActor()))
 		{
-			if (HasAuthority() && GetInstigatorController())
+			if (GetInstigatorController())
 			{
-				UGameplayStatics::ApplyDamage(
-				BlasterCharacter,
-				Damage,
-				GetInstigatorController(),
-				this,
-				UDamageType::StaticClass()
-				);
+				if (HasAuthority() && !bUseServerSideRewind)
+				{
+					UGameplayStatics::ApplyDamage(
+					BlasterCharacter,
+					Damage,
+					GetInstigatorController(),
+					this,
+					UDamageType::StaticClass()
+					);
+				}
+				if (!HasAuthority() && bUseServerSideRewind)
+				{
+					BlasterOwnerCharacter = BlasterOwnerCharacter == nullptr ? Cast<ABlasterCharacter>(GetInstigator()) : BlasterOwnerCharacter;
+					BlasterOwnerController = BlasterOwnerController == nullptr ? Cast<ABlasterPlayerController>(GetInstigatorController()) : BlasterOwnerController;
+					if (BlasterOwnerController && BlasterOwnerCharacter && BlasterOwnerCharacter->GetLagCompensation())
+					{
+						BlasterOwnerCharacter->GetLagCompensation()->ServerScoreRequest(
+							BlasterCharacter,
+							Start,
+							HitTarget,
+							BlasterOwnerController->GetServerTime() - BlasterOwnerController->SingleTripTime,
+							this
+						);
+					}
+				}
 			}
 		}
 		if (HitSound)
@@ -95,7 +116,7 @@ void AHitScanWeapon::WeaponTraceHit(const FVector& TraceStart, const FVector& Hi
 			BeamEnd = OutHit.ImpactPoint;
 		}
 		
-		DrawDebugSphere(GetWorld(), BeamEnd, 16.f, 12, FColor::Orange, true);
+		// DrawDebugSphere(GetWorld(), BeamEnd, 16.f, 12, FColor::Orange, true);
 		
 		if (BeamParticles)
 		{

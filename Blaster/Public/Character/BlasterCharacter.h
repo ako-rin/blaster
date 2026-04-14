@@ -19,6 +19,7 @@ class UCombatComponent;
 class UBuffComponent;
 class UBlasterAnimInstance;
 class USoundCue;
+class ULagCompensationComponent;
 
 UCLASS()
 class BLASTER_API ABlasterCharacter : public ACharacter, public IInteractWithCrosshairsInterface
@@ -59,7 +60,7 @@ public:
 	
 
 public:
-	
+
 	UFUNCTION()
 	void OnRep_OverlappingWeapon(AWeapon* LastWeapon);
 
@@ -132,6 +133,8 @@ public:
 
 	FORCEINLINE AWeapon* GetOverlappingWeapon() const {return OverlappingWeapon;}
 	
+	FORCEINLINE ULagCompensationComponent* GetLagCompensation() const {return LagCompensation;}
+	
 	bool IsLocallyReloading() const;
 
 	UBlasterAnimInstance* GetAnimInstance() const;
@@ -196,7 +199,60 @@ private:
 	
 	void StartDissolve();
 	
+public:
+		
+	UPROPERTY()
+	TMap<FName, class UBoxComponent*> HitCollisionBoxes;
+	
 protected:
+		
+	/**
+	 * Hit Boxes used for server-side rewind
+	 */
+	UPROPERTY(EditAnywhere)
+	class UBoxComponent* Head;
+	
+	UPROPERTY(EditAnywhere)
+	class UBoxComponent* Pelvis;
+	
+	UPROPERTY(EditAnywhere)
+	class UBoxComponent* Spine;
+	
+	UPROPERTY(EditAnywhere)
+	class UBoxComponent* UpperArm_L;
+	
+	UPROPERTY(EditAnywhere)
+	class UBoxComponent* UpperArm_R;
+	
+	UPROPERTY(EditAnywhere)
+	class UBoxComponent* LowerArm_L;
+	
+	UPROPERTY(EditAnywhere)
+	class UBoxComponent* LowerArm_R;
+	
+	UPROPERTY(EditAnywhere)
+	class UBoxComponent* Hand_L;
+	
+	UPROPERTY(EditAnywhere)
+	class UBoxComponent* Hand_R;
+	
+	UPROPERTY(EditAnywhere)
+	class UBoxComponent* UpperLeg_L;
+	
+	UPROPERTY(EditAnywhere)
+	class UBoxComponent* UpperLeg_R;
+	
+	UPROPERTY(EditAnywhere)
+	class UBoxComponent* LowerLeg_L;
+	
+	UPROPERTY(EditAnywhere)
+	class UBoxComponent* LowerLeg_R;
+	
+	UPROPERTY(EditAnywhere)
+	class UBoxComponent* Feet_L;
+	
+	UPROPERTY(EditAnywhere)
+	class UBoxComponent* Feet_R;
 	
 	UPROPERTY(EditAnywhere, Category = "Combat|Input")
 	UInputAction* JumpAction;
@@ -277,6 +333,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere)
 	class UBuffComponent* Buff;
+	
+	UPROPERTY(VisibleAnywhere)
+	ULagCompensationComponent* LagCompensation;
 
 	UPROPERTY(VisibleAnywhere)
 	UTimelineComponent* DissolveTimeline;

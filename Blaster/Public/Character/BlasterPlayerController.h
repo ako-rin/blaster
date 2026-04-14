@@ -102,6 +102,9 @@ private:
 	void HandleMatchHasStarted();
 	void HandleCooldown();
 	
+public:
+	float SingleTripTime = 0.f;
+	
 protected:
 
 	UPROPERTY(EditAnywhere, Category = "Input")

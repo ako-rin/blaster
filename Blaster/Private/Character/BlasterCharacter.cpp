@@ -21,6 +21,8 @@
 #include "Particles/ParticleSystemComponent.h"
 #include "Sound/SoundCue.h"
 #include "Character/BlasterPlayerState.h"
+#include "Components/BoxComponent.h"
+#include "BlasterComponent/LagCompensationComponent.h"
 
 #define INDEX_DISSOLVE 0
 #define INITIALIZE_DISSOLVE -0.55f
@@ -85,6 +87,8 @@ ABlasterCharacter::ABlasterCharacter()
 	Buff = CreateDefaultSubobject<UBuffComponent>(TEXT("Buff"));
 	Buff->SetIsReplicated(true);
 	
+	LagCompensation = CreateDefaultSubobject<ULagCompensationComponent>(TEXT("Lag Compensation"));
+	
 	TurningInPlace = ETurningInPlace::TIP_NotTurning;
 	
 	SetNetUpdateFrequency(66.f);
@@ -96,6 +100,112 @@ ABlasterCharacter::ABlasterCharacter()
 	AttachedGrenade->SetupAttachment(GetMesh(), FName("GrenadeSocket"));
 	AttachedGrenade->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	
+	/**
+	 * Hit boxes for server-side rewind
+	 */
+	
+	Head = CreateDefaultSubobject<UBoxComponent>(TEXT("head"));
+	Head->SetupAttachment(GetMesh(), FName("head"));
+	Head->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	HitCollisionBoxes.Add(FName("head"), Head);
+	
+	Pelvis = CreateDefaultSubobject<UBoxComponent>(TEXT("pelvis"));
+	Pelvis->SetupAttachment(GetMesh(), FName("pelvis"));
+	Pelvis->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	HitCollisionBoxes.Add(FName("pelvis"), Pelvis);
+	
+	Spine = CreateDefaultSubobject<UBoxComponent>(TEXT("spine"));
+	Spine->SetupAttachment(GetMesh(), FName("spine"));
+	Spine->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	HitCollisionBoxes.Add(FName("spine"), Spine);
+	
+	UpperArm_L = CreateDefaultSubobject<UBoxComponent>(TEXT("upper_arm_L"));
+	UpperArm_L->SetupAttachment(GetMesh(), FName("upper_arm_L"));
+	UpperArm_L->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	HitCollisionBoxes.Add(FName("upper_arm_L"), UpperArm_L);
+	
+	UpperArm_R = CreateDefaultSubobject<UBoxComponent>(TEXT("upper_arm_R"));
+	UpperArm_R->SetupAttachment(GetMesh(), FName("upper_arm_R"));
+	UpperArm_R->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	HitCollisionBoxes.Add(FName("upper_arm_R"), UpperArm_R);
+	
+	LowerArm_L = CreateDefaultSubobject<UBoxComponent>(TEXT("lower_arm_L"));
+	LowerArm_L->SetupAttachment(GetMesh(), FName("lower_arm_L"));
+	LowerArm_L->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	HitCollisionBoxes.Add(FName("lower_arm_L"), LowerArm_L);
+	
+	LowerArm_R = CreateDefaultSubobject<UBoxComponent>(TEXT("lower_arm_R"));
+	LowerArm_R->SetupAttachment(GetMesh(), FName("lower_arm_R"));
+	LowerArm_R->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	HitCollisionBoxes.Add(FName("lower_arm_R"), LowerArm_R);
+	
+	Hand_L = CreateDefaultSubobject<UBoxComponent>(TEXT("hand_L"));
+	Hand_L->SetupAttachment(GetMesh(), FName("hand_L"));
+	Hand_L->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	HitCollisionBoxes.Add(FName("hand_L"), Hand_L);
+	
+	Hand_R = CreateDefaultSubobject<UBoxComponent>(TEXT("hand_R"));
+	Hand_R->SetupAttachment(GetMesh(), FName("hand_R"));
+	Hand_R->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	HitCollisionBoxes.Add(FName("hand_R"), Hand_R);
+	
+	UpperLeg_L = CreateDefaultSubobject<UBoxComponent>(TEXT("upper_leg_L"));
+	UpperLeg_L->SetupAttachment(GetMesh(), FName("upper_leg_L"));
+	UpperLeg_L->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	HitCollisionBoxes.Add(FName("upper_leg_L"), UpperLeg_L);
+	
+	UpperLeg_R = CreateDefaultSubobject<UBoxComponent>(TEXT("upper_leg_R"));
+	UpperLeg_R->SetupAttachment(GetMesh(), FName("upper_leg_R"));
+	UpperLeg_R->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	HitCollisionBoxes.Add(FName("upper_leg_R"), UpperLeg_R);
+	
+	LowerLeg_L = CreateDefaultSubobject<UBoxComponent>(TEXT("lower_leg_L"));
+	LowerLeg_L->SetupAttachment(GetMesh(), FName("lower_leg_L"));
+	LowerLeg_L->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	HitCollisionBoxes.Add(FName("lower_leg_L"), LowerLeg_L);
+	
+	LowerLeg_R = CreateDefaultSubobject<UBoxComponent>(TEXT("lower_leg_R"));
+	LowerLeg_R->SetupAttachment(GetMesh(), FName("lower_leg_R"));
+	LowerLeg_R->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	HitCollisionBoxes.Add(FName("lower_leg_R"), LowerLeg_R);
+	
+	Feet_L = CreateDefaultSubobject<UBoxComponent>(TEXT("foot_L"));
+	Feet_L->SetupAttachment(GetMesh(), FName("foot_L"));
+	Feet_L->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	HitCollisionBoxes.Add(FName("foot_L"), Feet_L);
+	
+	Feet_R = CreateDefaultSubobject<UBoxComponent>(TEXT("foot_R"));
+	Feet_R->SetupAttachment(GetMesh(), FName("foot_R"));
+	Feet_R->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	HitCollisionBoxes.Add(FName("foot_R"), Feet_R);
+}
+
+
+void ABlasterCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	// Initial for CombatComponent
+	if (Combat)
+	{
+		Combat->Character = this;
+	}
+	if (Buff)
+	{
+		Buff->Character = this;
+		Buff->SetInitialSpeeds(GetCharacterMovement()->MaxWalkSpeed, GetCharacterMovement()->MaxWalkSpeedCrouched);
+
+		Buff->SetInitialJumpZVelocity(MaxJumpZVelocity);
+	}
+	
+	if (LagCompensation)
+	{
+		LagCompensation->Character = this;
+		if (Controller)
+		{
+			LagCompensation->Controller = Cast<ABlasterPlayerController>(Controller);
+		}
+	}
 }
 
 void ABlasterCharacter::BeginPlay()
@@ -145,24 +255,6 @@ void ABlasterCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimePropert
 	DOREPLIFETIME_CONDITION(ABlasterCharacter, OverlappingWeapon, COND_OwnerOnly);
 	DOREPLIFETIME(ABlasterCharacter, Health);
 	DOREPLIFETIME(ABlasterCharacter, Shield);
-}
-
-void ABlasterCharacter::PostInitializeComponents()
-{
-	Super::PostInitializeComponents();
-
-	// Initial for CombatComponent
-	if (Combat)
-	{
-		Combat->Character = this;
-	}
-	if (Buff)
-	{
-		Buff->Character = this;
-		Buff->SetInitialSpeeds(GetCharacterMovement()->MaxWalkSpeed, GetCharacterMovement()->MaxWalkSpeedCrouched);
-
-		Buff->SetInitialJumpZVelocity(MaxJumpZVelocity);
-	}
 }
 
 void ABlasterCharacter::Destroyed()
@@ -762,6 +854,7 @@ bool ABlasterCharacter::IsLocallyReloading() const
 	{
 		return Combat->IsLocallyReloading();
 	}
+	return false;
 }
 
 UBlasterAnimInstance* ABlasterCharacter::GetAnimInstance() const

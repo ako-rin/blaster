@@ -75,6 +75,8 @@ public:
 	
 	FORCEINLINE EFireType GetFireType() const {return FireType;}
 	
+	FORCEINLINE float GetDamage() const {return Damage;}
+	
 	
 	virtual void Fire(const FVector& HitTarget);
 
@@ -161,6 +163,18 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Weapon Properties|Weapon Scatter")
 	bool bUseScatter = false;
 	
+	UPROPERTY(EditAnywhere, Category = "Weapon Properties")
+	float Damage = 20.f;
+	
+	UPROPERTY(EditAnywhere, Category = "Weapon Properties|Server Rewind")
+	bool bUseServerSideRewind = false;
+	
+	UPROPERTY()
+	class ABlasterCharacter* BlasterOwnerCharacter;
+	
+	UPROPERTY()
+	class ABlasterPlayerController* BlasterOwnerController;
+
 private:
 
 	UPROPERTY(VisibleAnywhere)
@@ -206,11 +220,6 @@ private:
 	int32 MagCapacity = 0;
 
 	int32 LocalAmmo = 0;
-
-	UPROPERTY()
-	class ABlasterCharacter* BlasterOwnerCharacter;
-	UPROPERTY()
-	class ABlasterPlayerController* BlasterOwnerController;
 
 	UPROPERTY(EditAnywhere, Category = "Weapon Properties")
 	EWeaponType WeaponType;

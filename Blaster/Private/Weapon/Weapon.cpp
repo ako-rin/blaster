@@ -14,7 +14,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Weapon/WeaponTypes.h"
 #include "Engine/SkeletalMeshSocket.h"
-
+#include "BlasterComponent/LagCompensationComponent.h"
 
 AWeapon::AWeapon()
 {
