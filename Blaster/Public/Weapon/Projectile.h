@@ -38,9 +38,21 @@ protected:
 private:
 	void DestroyTimerFinished();
 	
-protected:
+public:
+	UPROPERTY(EditAnywhere, Category = "Projectile Properties")
+	bool bUseServerSideRewind = false;
+	
+	FVector_NetQuantize TraceStart;
+	FVector_NetQuantize100 InitialVelocity;
+	
+	UPROPERTY(EditAnywhere, Category = "Projectile Properties")
+	float InitialSpeed = 15000;
+	
+	// When using rifle, the Damage will be inherited from the weapon
 	UPROPERTY(EditAnywhere, Category = "Projectile Properties|Damage")
 	float Damage = 20.f;
+	
+protected:
 
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UStaticMeshComponent> ProjectileMesh = nullptr;
@@ -59,7 +71,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Projectile Properties|Damage")
 	float FalloffExponent = 1.f; 
-
+	
 private:
 
 	UPROPERTY(EditAnywhere)

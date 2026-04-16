@@ -150,6 +150,52 @@ FShotgunServerSideRewindResult ULagCompensationComponent::ShotgunConfirmHit(cons
 	return ShotgunResult;
 }
 
+FServerSideRewindResult ULagCompensationComponent::ProjectileConfirmHit(const FFramePackage& ScanFrame, ABlasterCharacter* HitCharacter,
+	const FVector_NetQuantize& TraceStart, const FVector_NetQuantize100 InitialVelocity, float HitTime)
+{
+	if (HitCharacter == nullptr || ScanFrame.HitBoxInfo.IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("HitCharacter == nullptr? %d, Package is empty: %d"), HitCharacter == nullptr, ScanFrame.HitBoxInfo.IsEmpty());
+		return FServerSideRewindResult{false, false};
+	} 
+	
+	FFramePackage CurrentFrame;
+	CurrentFrame.Character = ScanFrame.Character;
+	CacheBoxPosition(HitCharacter, CurrentFrame);
+	MoveBoxes(HitCharacter, ScanFrame);
+	
+	FPredictProjectilePathParams PathParams;
+	PathParams.bTraceWithChannel = true;
+	PathParams.bTraceWithCollision = true;
+	PathParams.LaunchVelocity = InitialVelocity;
+	PathParams.StartLocation = TraceStart;
+	PathParams.SimFrequency = 15.f;
+	PathParams.ProjectileRadius = 5.f;
+	PathParams.TraceChannel = ECC_LagCompensation;
+	PathParams.ActorsToIgnore.Add(GetOwner());
+	// PathParams.DrawDebugTime = 5.f;
+	// PathParams.DrawDebugType = EDrawDebugTrace::ForDuration;
+	
+	FPredictProjectilePathResult PathResult;
+	UGameplayStatics::PredictProjectilePath(this, PathParams, PathResult);
+	
+	if (PathResult.HitResult.bBlockingHit)
+	{
+		ResetHitBoxes(HitCharacter, CurrentFrame);
+		UBoxComponent* HeadBox = HitCharacter->HitCollisionBoxes[FName("head")];
+		if (PathResult.HitResult.Component.IsValid() && PathResult.HitResult.Component == HeadBox)
+		{
+			return FServerSideRewindResult{ true, true };
+		}
+		else
+		{
+			return FServerSideRewindResult{ true, false };
+		}
+	}
+	ResetHitBoxes(HitCharacter, CurrentFrame);
+	return FServerSideRewindResult{ false, false };
+}
+
 void ULagCompensationComponent::CacheBoxPosition(ABlasterCharacter* HitCharacter, FFramePackage& OutFramePackage)
 {
 	if (HitCharacter == nullptr) return;
@@ -222,6 +268,14 @@ FShotgunServerSideRewindResult ULagCompensationComponent::ShotgunServerSideRewin
 }
 
 
+FServerSideRewindResult ULagCompensationComponent::ProjectileServerSideRewind(ABlasterCharacter* HitCharacter,
+	const FVector_NetQuantize& TraceStart, const FVector_NetQuantize100 InitialVelocity, float HitTime)
+{
+	FFramePackage FrameToCheck = GetFrameToCheck(HitCharacter, HitTime);
+	return ProjectileConfirmHit(FrameToCheck, HitCharacter, TraceStart, InitialVelocity, HitTime);
+}
+
+
 FFramePackage ULagCompensationComponent::GetFrameToCheck(ABlasterCharacter* HitCharacter, float HitTime)
 {
 	bool bReturn = HitCharacter == nullptr
@@ -232,9 +286,6 @@ FFramePackage ULagCompensationComponent::GetFrameToCheck(ABlasterCharacter* HitC
 	
 	if (bReturn)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("HitCharacter == nullptr? %d, HitCharacter->GetLagCompensation() == nullptr? %d, HitCharacter->IsElimmed()? %d, HitCharacter->GetLagCompensation()->FrameHistory.GetHead() == nullptr? %d, HitCharacter->GetLagCompensation()->FrameHistory.GetTail() == nullptr? %d"),
-		HitCharacter == nullptr, HitCharacter->GetLagCompensation() == nullptr, HitCharacter->IsElimmed(), HitCharacter->GetLagCompensation()->FrameHistory.GetHead() == nullptr, HitCharacter->GetLagCompensation()->FrameHistory.GetTail() == nullptr  
-		);
 		return FFramePackage();
 	}
 	
@@ -341,6 +392,23 @@ void ULagCompensationComponent::ShotgunServerScoreRequest_Implementation(const T
 			TotalDamage,
 			Character->Controller,
 			Weapon,
+			UDamageType::StaticClass()
+		);
+	}
+}
+
+void ULagCompensationComponent::ProjectileServerScoreRequest_Implementation(ABlasterCharacter* HitCharacter,
+	const FVector_NetQuantize& TraceStart, const FVector_NetQuantize100 InitialVelocity, float HitTime)
+{
+	FServerSideRewindResult Confirm = ProjectileServerSideRewind(HitCharacter, TraceStart, InitialVelocity, HitTime);
+	UE_LOG(LogTemp, Warning, TEXT("Confirm.bHitCanFirmed %d"), Confirm.bHitCanFirmed);
+	if (Character && HitCharacter && Confirm.bHitCanFirmed)
+	{
+		UGameplayStatics::ApplyDamage(
+			HitCharacter,
+			Character->GetEquippedWeapon()->GetDamage(),
+			Character->Controller,
+			Character->GetEquippedWeapon(),
 			UDamageType::StaticClass()
 		);
 	}

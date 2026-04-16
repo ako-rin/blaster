@@ -25,4 +25,8 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Weapon Properties|Projectile")
 	TSubclassOf<class AProjectile> ProjectileClass;
+	
+	// virtual projectile, damage will be inherited from the weapon
+	UPROPERTY(EditAnywhere, Category = "Weapon Properties|Projectile")
+	TSubclassOf<class AProjectile> ServerSideRewindProjectileClass;
 };

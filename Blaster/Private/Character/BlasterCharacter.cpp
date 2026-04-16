@@ -61,6 +61,7 @@ ABlasterCharacter::ABlasterCharacter()
 	GetMesh()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 	GetMesh()->SetCollisionResponseToChannel(ECC_LagCompensation, ECR_Ignore);
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_LagCompensation, ECR_Ignore);
 	
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("Camera Boom"));
 	CameraBoom->SetupAttachment(GetMesh());
@@ -107,108 +108,74 @@ ABlasterCharacter::ABlasterCharacter()
 	
 	Head = CreateDefaultSubobject<UBoxComponent>(TEXT("head"));
 	Head->SetupAttachment(GetMesh(), FName("head"));
-	Head->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	Head->SetCollisionResponseToAllChannels(ECR_Ignore);
-	Head->SetCollisionResponseToChannel(ECC_LagCompensation, ECR_Block);
 	HitCollisionBoxes.Add(FName("head"), Head);
 	
 	Pelvis = CreateDefaultSubobject<UBoxComponent>(TEXT("pelvis"));
 	Pelvis->SetupAttachment(GetMesh(), FName("pelvis"));
-	Pelvis->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	Pelvis->SetCollisionResponseToAllChannels(ECR_Ignore);
-	Pelvis->SetCollisionResponseToChannel(ECC_LagCompensation, ECR_Block);
 	HitCollisionBoxes.Add(FName("pelvis"), Pelvis);
 	
 	Spine = CreateDefaultSubobject<UBoxComponent>(TEXT("spine"));
 	Spine->SetupAttachment(GetMesh(), FName("spine"));
-	Spine->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	Spine->SetCollisionResponseToAllChannels(ECR_Ignore);
-	Spine->SetCollisionResponseToChannel(ECC_LagCompensation, ECR_Block);
 	HitCollisionBoxes.Add(FName("spine"), Spine);
 	
 	UpperArm_L = CreateDefaultSubobject<UBoxComponent>(TEXT("upper_arm_L"));
 	UpperArm_L->SetupAttachment(GetMesh(), FName("upper_arm_L"));
-	UpperArm_L->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	UpperArm_L->SetCollisionResponseToAllChannels(ECR_Ignore);
-	UpperArm_L->SetCollisionResponseToChannel(ECC_LagCompensation, ECR_Block);
 	HitCollisionBoxes.Add(FName("upper_arm_L"), UpperArm_L);
 	
 	UpperArm_R = CreateDefaultSubobject<UBoxComponent>(TEXT("upper_arm_R"));
 	UpperArm_R->SetupAttachment(GetMesh(), FName("upper_arm_R"));
-	UpperArm_R->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	UpperArm_R->SetCollisionResponseToAllChannels(ECR_Ignore);
-	UpperArm_R->SetCollisionResponseToChannel(ECC_LagCompensation, ECR_Block);
 	HitCollisionBoxes.Add(FName("upper_arm_R"), UpperArm_R);
 	
 	LowerArm_L = CreateDefaultSubobject<UBoxComponent>(TEXT("lower_arm_L"));
 	LowerArm_L->SetupAttachment(GetMesh(), FName("lower_arm_L"));
-	LowerArm_L->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	LowerArm_L->SetCollisionResponseToAllChannels(ECR_Ignore);
-	LowerArm_L->SetCollisionResponseToChannel(ECC_LagCompensation, ECR_Block);
 	HitCollisionBoxes.Add(FName("lower_arm_L"), LowerArm_L);
 	
 	LowerArm_R = CreateDefaultSubobject<UBoxComponent>(TEXT("lower_arm_R"));
 	LowerArm_R->SetupAttachment(GetMesh(), FName("lower_arm_R"));
-	LowerArm_R->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	LowerArm_R->SetCollisionResponseToAllChannels(ECR_Ignore);
-	LowerArm_R->SetCollisionResponseToChannel(ECC_LagCompensation, ECR_Block);
 	HitCollisionBoxes.Add(FName("lower_arm_R"), LowerArm_R);
 	
 	Hand_L = CreateDefaultSubobject<UBoxComponent>(TEXT("hand_L"));
 	Hand_L->SetupAttachment(GetMesh(), FName("hand_L"));
-	Hand_L->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	Hand_L->SetCollisionResponseToAllChannels(ECR_Ignore);
-	Hand_L->SetCollisionResponseToChannel(ECC_LagCompensation, ECR_Block);
 	HitCollisionBoxes.Add(FName("hand_L"), Hand_L);
 	
 	Hand_R = CreateDefaultSubobject<UBoxComponent>(TEXT("hand_R"));
 	Hand_R->SetupAttachment(GetMesh(), FName("hand_R"));
-	Hand_R->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	Hand_R->SetCollisionResponseToAllChannels(ECR_Ignore);
-	Hand_R->SetCollisionResponseToChannel(ECC_LagCompensation, ECR_Block);
 	HitCollisionBoxes.Add(FName("hand_R"), Hand_R);
 	
 	UpperLeg_L = CreateDefaultSubobject<UBoxComponent>(TEXT("upper_leg_L"));
 	UpperLeg_L->SetupAttachment(GetMesh(), FName("upper_leg_L"));
-	UpperLeg_L->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	UpperLeg_L->SetCollisionResponseToAllChannels(ECR_Ignore);
-	UpperLeg_L->SetCollisionResponseToChannel(ECC_LagCompensation, ECR_Block);
 	HitCollisionBoxes.Add(FName("upper_leg_L"), UpperLeg_L);
 	
 	UpperLeg_R = CreateDefaultSubobject<UBoxComponent>(TEXT("upper_leg_R"));
 	UpperLeg_R->SetupAttachment(GetMesh(), FName("upper_leg_R"));
-	UpperLeg_R->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	UpperLeg_R->SetCollisionResponseToAllChannels(ECR_Ignore);
-	UpperLeg_R->SetCollisionResponseToChannel(ECC_LagCompensation, ECR_Block);
 	HitCollisionBoxes.Add(FName("upper_leg_R"), UpperLeg_R);
 	
 	LowerLeg_L = CreateDefaultSubobject<UBoxComponent>(TEXT("lower_leg_L"));
 	LowerLeg_L->SetupAttachment(GetMesh(), FName("lower_leg_L"));
-	LowerLeg_L->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	LowerLeg_L->SetCollisionResponseToAllChannels(ECR_Ignore);
-	LowerLeg_L->SetCollisionResponseToChannel(ECC_LagCompensation, ECR_Block);
 	HitCollisionBoxes.Add(FName("lower_leg_L"), LowerLeg_L);
 	
 	LowerLeg_R = CreateDefaultSubobject<UBoxComponent>(TEXT("lower_leg_R"));
 	LowerLeg_R->SetupAttachment(GetMesh(), FName("lower_leg_R"));
-	LowerLeg_R->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	LowerLeg_R->SetCollisionResponseToAllChannels(ECR_Ignore);
-	LowerLeg_R->SetCollisionResponseToChannel(ECC_LagCompensation, ECR_Block);
 	HitCollisionBoxes.Add(FName("lower_leg_R"), LowerLeg_R);
 	
 	Feet_L = CreateDefaultSubobject<UBoxComponent>(TEXT("foot_L"));
 	Feet_L->SetupAttachment(GetMesh(), FName("foot_L"));
-	Feet_L->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	Feet_L->SetCollisionResponseToAllChannels(ECR_Ignore);
-	Feet_L->SetCollisionResponseToChannel(ECC_LagCompensation, ECR_Block);
 	HitCollisionBoxes.Add(FName("foot_L"), Feet_L);
 	
 	Feet_R = CreateDefaultSubobject<UBoxComponent>(TEXT("foot_R"));
 	Feet_R->SetupAttachment(GetMesh(), FName("foot_R"));
-	Feet_R->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	Feet_R->SetCollisionResponseToAllChannels(ECR_Ignore);
-	Feet_R->SetCollisionResponseToChannel(ECC_LagCompensation, ECR_Block);
 	HitCollisionBoxes.Add(FName("foot_R"), Feet_R);
+	
+	for (auto& Box : HitCollisionBoxes)
+	{
+		if (Box.Value)
+		{
+			Box.Value->SetCollisionObjectType(ECC_HitBox);
+			Box.Value->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+			Box.Value->SetCollisionResponseToAllChannels(ECR_Ignore);
+			Box.Value->SetCollisionResponseToChannel(ECC_LagCompensation, ECR_Block);
+		}
+	}
 }
 
 
