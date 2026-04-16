@@ -39,11 +39,11 @@ void AHitScanWeapon::Fire(const FVector& HitTarget)
 				if (HasAuthority() && !bUseServerSideRewind)
 				{
 					UGameplayStatics::ApplyDamage(
-					BlasterCharacter,
-					Damage,
-					GetInstigatorController(),
-					this,
-					UDamageType::StaticClass()
+						BlasterCharacter,
+						Damage,
+						GetInstigatorController(),
+						this,
+						UDamageType::StaticClass()
 					);
 				}
 				if (!HasAuthority() && bUseServerSideRewind)
