@@ -108,6 +108,9 @@ public:
 	 */
 	FVector TraceEndWithScatter(const FVector& HitTarget);
 	
+	UFUNCTION()
+	void OnPingTooHigh(bool bPingTooHigh);
+	
 protected:
 	
 	UFUNCTION()

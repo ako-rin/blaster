@@ -6,6 +6,8 @@
 #include "GameFramework/PlayerController.h"
 #include "BlasterPlayerController.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHighPingDelegate, bool, bPingTooHigh);
+
 class UInputMappingContext;
 
 /**
@@ -65,6 +67,10 @@ public:
 	 */
 	UFUNCTION()
 	void OnRep_MatchState();
+	
+	
+	UFUNCTION(Server, Reliable)
+	void ServerReportPingStatus(bool bHighPing);
 
 protected:
 	/**
@@ -104,6 +110,8 @@ private:
 	
 public:
 	float SingleTripTime = 0.f;
+	
+	FHighPingDelegate HighPingDelegate;
 	
 protected:
 

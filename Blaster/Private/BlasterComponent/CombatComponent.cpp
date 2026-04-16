@@ -251,13 +251,13 @@ void UCombatComponent::EquipPrimaryWeapon(AWeapon* WeaponToEquip)
 	// Equip Weapon
 	DropEquippedWeapon();
 
+	EquippedWeapon->SetOwner(Character);
+	EquippedWeapon->SetInstigator(Character);
+
 	EquippedWeapon = WeaponToEquip; // Call OnRep
 	EquippedWeapon->SetWeaponState(EWeaponState::EWS_Equipped); // Call OnRep
 	
 	AttachActorToRightHand(EquippedWeapon);
-
-	EquippedWeapon->SetOwner(Character);
-	EquippedWeapon->SetInstigator(Character);
 	
 	EquippedWeapon->SetHUDAmmo();
 
@@ -275,15 +275,15 @@ void UCombatComponent::EquipPrimaryWeapon(AWeapon* WeaponToEquip)
 void UCombatComponent::EquipSecondaryWeapon(AWeapon* WeaponToEquip)
 {
 	if (!WeaponToEquip) return;
+	
+	SecondaryWeapon->SetOwner(Character);
+	SecondaryWeapon->SetInstigator(Character);
+	
 	SecondaryWeapon = WeaponToEquip;
 	SecondaryWeapon->SetWeaponState(EWeaponState::EWS_EquippedSecondary);
 	
 	AttachActorToBackpack(SecondaryWeapon);
 	PlayEquippedWeaponSound(SecondaryWeapon);
-	
-	SecondaryWeapon->SetOwner(Character);
-	SecondaryWeapon->SetInstigator(Character);
-
 }
 
 void UCombatComponent::OnRep_EquippedWeapon()
