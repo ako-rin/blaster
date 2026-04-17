@@ -530,7 +530,11 @@ void UCombatComponent::ServerReload_Implementation()
 	if (CarriedAmountAmmo <= 0) return;
 	
 	CombatState = ECombatState::ECS_Reloading;
- 	if (!Character->IsLocallyControlled()) HandleReload();
+	
+ 	if (!Character->IsLocallyControlled())
+ 	{
+ 		HandleReload();
+ 	} 
 }
 
 void UCombatComponent::ServerShotGunReload_Implementation()
@@ -569,9 +573,9 @@ void UCombatComponent::PickupAmmo(EWeaponType WeaponType, int32 AmmoAmount)
 
 		UpdateCarriedAmmo();
 	}
-
-	if (EquippedWeapon && EquippedWeapon->IsEmptyAmmo() && EquippedWeapon->GetWeaponType() == WeaponType)
+	if (EquippedWeapon && EquippedWeapon->IsEmptyAmmo() && EquippedWeapon->GetWeaponType() == WeaponType && CombatState == ECombatState::ECS_Unoccupied)
 	{
+		HandleReload();
 		ServerReload();
 	}
 	
