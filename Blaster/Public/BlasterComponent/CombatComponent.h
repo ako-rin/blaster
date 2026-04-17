@@ -151,6 +151,9 @@ private:
 
 	UFUNCTION(Server, Reliable)
 	void ServerThrowGrenade();
+	
+	UFUNCTION(Client, Reliable)
+	void ClientHandleReload();
 
 	/**
 	 * Handle Functions

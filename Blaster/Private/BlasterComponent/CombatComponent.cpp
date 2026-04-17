@@ -565,6 +565,7 @@ void UCombatComponent::ThrowGrenadeFinished()
 	AttachActorToRightHand(EquippedWeapon);
 }
 
+// On Server
 void UCombatComponent::PickupAmmo(EWeaponType WeaponType, int32 AmmoAmount)
 {
 	if (CarriedAmmoMap.Contains(WeaponType))
@@ -573,11 +574,14 @@ void UCombatComponent::PickupAmmo(EWeaponType WeaponType, int32 AmmoAmount)
 
 		UpdateCarriedAmmo();
 	}
-	if (EquippedWeapon && EquippedWeapon->IsEmptyAmmo() && EquippedWeapon->GetWeaponType() == WeaponType && CombatState == ECombatState::ECS_Unoccupied)
-	{
-		HandleReload();
-		ServerReload();
-	}
+	// 由于该函数只在服务端执行，客户端不会执行 HandleReload 也就会少播放换弹 Montage
+	ClientHandleReload();
+	DoReloading();
+	// if (EquippedWeapon && EquippedWeapon->IsEmptyAmmo() && EquippedWeapon->GetWeaponType() == WeaponType && CombatState == ECombatState::ECS_Unoccupied)
+	// {
+	// 	HandleReload();
+	// 	ServerReload();
+	// }
 	
 }
 
@@ -734,6 +738,11 @@ void UCombatComponent::FireShotgun()
 		if (!Character->HasAuthority()) ShotgunLocalFire(bFiring, HitTargets);
 		ServerShotgunFiring(bFiring, HitTargets, EquippedWeapon->GetFireDelay());
 	}
+}
+
+void UCombatComponent::ClientHandleReload_Implementation()
+{
+	DoReloading();
 }
 
 // Play Reload Montage
