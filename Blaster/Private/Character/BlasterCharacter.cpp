@@ -407,13 +407,60 @@ void ABlasterCharacter::DoLook(float Yaw, float Pitch)
 	}
 }
 
+// Pickup Weapon
 void ABlasterCharacter::DoPickup()
+{
+	if (bDisableGameplay) return;
+	if (Combat)
+	{
+		if (Combat->CombatState == ECombatState::ECS_Unoccupied)
+		{
+			ServerSetEquipped();
+		}
+		
+		bool bSwap = Combat->ShouldSwapWeapons() 
+			&& !HasAuthority() 
+			&& IsLocallyControlled()
+			&& Combat->CombatState == ECombatState::ECS_Unoccupied
+			&& OverlappingWeapon == nullptr; // 捡枪时不要播放换枪蒙太奇，否则会触发换枪通知函数
+		
+		if (bSwap)
+		{
+			Combat->SwapWeapon();
+			// if (UBlasterAnimInstance* AnimInstance = GetAnimInstance())
+			// {
+			// 	AnimInstance->PlayEquipMontage();
+			// }
+			// Combat->CombatState = ECombatState::ECS_SwapWeapon;
+			//
+			// Combat->SetLocallySwapWeapon(false);
+		}
+	}
+}
+
+// Server call this function
+void ABlasterCharacter::ServerSetEquipped_Implementation()
 {
 	if (Combat)
 	{
-		ServerSetEquipped();
+		if (OverlappingWeapon)
+		{
+			// UE_LOG(LogTemp, Warning, TEXT("Overlapping Weapon"));
+			Combat->EquipWeapon(OverlappingWeapon);
+		}
+		else if (Combat->ShouldSwapWeapons())
+		{
+			Combat->SwapWeapon();
+		}
+	}
+
+	if (Combat && Combat->EquippedWeapon)
+	{
+		GetCharacterMovement()->bOrientRotationToMovement = false;
+		bUseControllerRotationYaw = true;
 	}
 }
+
 
 void ABlasterCharacter::DoDrop()
 {
@@ -548,30 +595,6 @@ void ABlasterCharacter::ReceiveDamage(AActor* DamageActor, float Damage, const U
 	}
 }
 
-// Server call this function
-void ABlasterCharacter::ServerSetEquipped_Implementation()
-{
-	if (Combat)
-	{
-		if (OverlappingWeapon)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Overlapping Weapon"));
-			Combat->EquipWeapon(OverlappingWeapon);
-		}
-		else if (Combat->ShouldSwapWeapons())
-		{
-			Combat->SwapWeapon();
-		}
-	}
-
-	if (Combat && Combat->EquippedWeapon)
-	{
-		GetCharacterMovement()->bOrientRotationToMovement = false;
-		bUseControllerRotationYaw = true;
-	}
-}
-
-
 void ABlasterCharacter::MulticastElim_Implementation()
 {
 	if (BlasterPlayerController)
@@ -688,6 +711,7 @@ void ABlasterCharacter::SpawnDefaultWeapon()
 		StartingWeapon->SetWeaponShouldDestroy(true);
 		if (Combat)
 		{
+			UE_LOG(LogTemp, Warning, TEXT("Set Default Weapon: %d"), StartingWeapon != nullptr);
 			Combat->EquipWeapon(StartingWeapon);
 		}
 	}
@@ -851,6 +875,15 @@ bool ABlasterCharacter::IsLocallyReloading() const
 	if (Combat)
 	{
 		return Combat->IsLocallyReloading();
+	}
+	return false;
+}
+
+bool ABlasterCharacter::IsLocallySwapWeapon() const
+{
+	if (Combat)
+	{
+		return Combat->IsLocallySwapWeapon();
 	}
 	return false;
 }

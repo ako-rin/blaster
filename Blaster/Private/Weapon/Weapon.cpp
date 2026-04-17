@@ -315,7 +315,8 @@ void AWeapon::OnEquippedSecondary()
 	WeaponMesh->SetEnableGravity(false);
 	WeaponMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-	EnableCustomDepth(true);
+	// CombatComponent: FinishEquiping 来启用着色，以此来表现可换枪时机
+	// EnableCustomDepth(true);
 	if (WeaponMesh)
 	{
 		WeaponMesh->SetCustomDepthStencilValue(CUSTOM_DEPTH_TAN);

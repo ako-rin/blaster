@@ -64,22 +64,25 @@ void AHitScanWeapon::Fire(const FVector& HitTarget)
 				}
 			}
 		}
-		if (HitSound)
+		if (FireHit.bBlockingHit)
 		{
-			UGameplayStatics::PlaySoundAtLocation(
-				this,
-				HitSound,
-				FireHit.ImpactPoint
-			);
-		}
-		if (ImpactParticles)
-		{
-			UGameplayStatics::SpawnEmitterAtLocation(
-				GetWorld(),
-				ImpactParticles,
-				FireHit.ImpactPoint,
-				FireHit.ImpactPoint.Rotation()
-			);
+			if (HitSound)
+			{
+				UGameplayStatics::PlaySoundAtLocation(
+					this,
+					HitSound,
+					FireHit.ImpactPoint
+				);
+			}
+			if (ImpactParticles)
+			{
+				UGameplayStatics::SpawnEmitterAtLocation(
+					GetWorld(),
+					ImpactParticles,
+					FireHit.ImpactPoint,
+					FireHit.ImpactPoint.Rotation()
+				);
+			}
 		}
 		if (MuzzleFlash)
 		{

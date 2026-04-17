@@ -136,6 +136,7 @@ public:
 	FORCEINLINE ULagCompensationComponent* GetLagCompensation() const {return LagCompensation;}
 	
 	bool IsLocallyReloading() const;
+	bool IsLocallySwapWeapon() const;
 
 	UBlasterAnimInstance* GetAnimInstance() const;
 	

@@ -30,6 +30,7 @@ public:
 
 	void PlayShotgunReloadEndMontage();
 	
+	void PlayEquipMontage();
 
 protected:
 
@@ -50,6 +51,12 @@ protected:
 
 	UFUNCTION()
 	void AnimNotify_GrenadeLaunch();
+	
+	UFUNCTION()
+	void AnimNotify_FinishEquipWeapon();
+	
+	UFUNCTION()
+	void AnimNotify_FinishAttachWeapon();
 
 private:
 	void Debug_DrawMuzzleLine(const bool& bDrawMuzzleLine) const;
@@ -150,6 +157,9 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Combat|Montage")
 	UAnimMontage* ThrowGrenadeMontage;
+	
+	UPROPERTY(EditAnywhere, Category = "Combat|Montage")
+	UAnimMontage* EquipMontage;
 	
 	/**
 	 * Sounds

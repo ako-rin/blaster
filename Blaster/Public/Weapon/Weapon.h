@@ -169,7 +169,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Weapon Properties")
 	float Damage = 20.f;
 	
-	UPROPERTY(EditAnywhere, Category = "Weapon Properties|Server Rewind")
+	UPROPERTY(Replicated, EditAnywhere, Category = "Weapon Properties|Server Rewind")
 	bool bUseServerSideRewind = false;
 	
 	UPROPERTY()

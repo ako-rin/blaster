@@ -108,7 +108,11 @@ void UBlasterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	}
 
 	bUseFABRIK = BlasterCharacter->GetCombatState() == ECombatState::ECS_Unoccupied;
-	if (BlasterCharacter->IsLocallyControlled() && BlasterCharacter->GetCombatState() != ECombatState::ECS_ThrowingGrenade)
+	bool bFABRIKUSE = BlasterCharacter->IsLocallyControlled() 
+		&& BlasterCharacter->GetCombatState() != ECombatState::ECS_ThrowingGrenade
+		&& BlasterCharacter->IsLocallySwapWeapon();
+	
+	if (bFABRIKUSE)
 	{
 		bUseFABRIK = !BlasterCharacter->IsLocallyReloading();
 	}
@@ -236,6 +240,17 @@ void UBlasterAnimInstance::PlayShotgunReloadEndMontage()
 	}
 }
 
+void UBlasterAnimInstance::PlayEquipMontage()
+{
+	if (!BlasterCharacter) return;
+
+	if (EquipMontage)
+	{
+		Montage_Play(EquipMontage);
+		Montage_JumpToSection(FName("Default"));
+	}
+}
+
 void UBlasterAnimInstance::AnimNotify_FootStepL()
 {
 	if (!BlasterCharacter) return;
@@ -300,6 +315,22 @@ void UBlasterAnimInstance::AnimNotify_GrenadeLaunch()
 		return;
 
 	BlasterCharacter->GetCombat()->LaunchGrenade();
+}
+
+void UBlasterAnimInstance::AnimNotify_FinishEquipWeapon()
+{
+	if (!BlasterCharacter || !BlasterCharacter->GetCombat())
+		return;
+
+	BlasterCharacter->GetCombat()->FinishEquiping();
+}
+
+void UBlasterAnimInstance::AnimNotify_FinishAttachWeapon()
+{
+	if (!BlasterCharacter || !BlasterCharacter->GetCombat())
+		return;
+	
+	BlasterCharacter->GetCombat()->FinishAttachEquiping();
 }
 
 void UBlasterAnimInstance::Debug_DrawMuzzleLine(const bool& bDrawMuzzleLine) const

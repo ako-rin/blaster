@@ -64,6 +64,9 @@ public:
 	FORCEINLINE float GetLastThrowGrenadeTime() const {return LastThrowGrenadeTime;}
 	
 	FORCEINLINE bool IsLocallyReloading() const {return bLocallyReloading;}
+	FORCEINLINE bool IsLocallySwapWeapon() const {return bFinishedSwapping;}
+	FORCEINLINE void SetLocallySwapWeapon(bool bSwapWeapon) {bFinishedSwapping = bSwapWeapon;}
+	
 	
 	/***
 	 * MultiCast 广播给所有角色执行逻辑
@@ -71,13 +74,22 @@ public:
 	UFUNCTION(NetMulticast, Unreliable)
 	void MultiCastFiring(bool bIsFiring, const FVector_NetQuantize& TraceHitResult); // Server and All Clients Call this
 	
-	UFUNCTION(Server, Reliable)
-	void ServerShotgunFiring(bool bIsFiring, const TArray<FVector_NetQuantize>& TraceHitResults);
+	/**
+	 * 
+	 * @param bIsFiring Firing: true, No Firing: false
+	 * @param TraceHitResult 量化后的 FVector，用于网络传输，FVector_NetQuantize 是 FVector 的子结构体
+	 */
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerFiring(bool bIsFiring, const FVector_NetQuantize& TraceHitResult, float FireDelay);
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerShotgunFiring(bool bIsFiring, const TArray<FVector_NetQuantize>& TraceHitResults, float FireDelay);
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastShotgunFiring(bool bIsFiring, const TArray<FVector_NetQuantize>& TraceHitResults);
 	
-	
+	void FinishEquiping();
+	void FinishAttachEquiping();
 	
 	/**
 	 * Reload
@@ -146,14 +158,6 @@ private:
 	 */
 	void HandleReload();
 
-	/**
-	 * 
-	 * @param bIsFiring Firing: true, No Firing: false
-	 * @param TraceHitResult 量化后的 FVector，用于网络传输，FVector_NetQuantize 是 FVector 的子结构体
-	 */
-	UFUNCTION(Server, Reliable)
-	void ServerFiring(bool bIsFiring, const FVector_NetQuantize& TraceHitResult);
-
 	void TraceUnderCrosshairs(FHitResult& TraceHitResult);
 
 	/**
@@ -217,6 +221,7 @@ private:
 
 	// Control Fabric
 	bool bLocallyReloading = false;
+	bool bFinishedSwapping = false;
 	
 	// Needn't to replicate, Button pressed
 	bool bFiring;
