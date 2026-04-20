@@ -70,5 +70,5 @@ private:
 
 	UPROPERTY()
 	UAnnouncement* Announcement; // point to blueprint
-
+	
 };

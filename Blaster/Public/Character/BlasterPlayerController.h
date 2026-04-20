@@ -24,7 +24,6 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void OnRep_Pawn() override;
 	
-	
 protected:
 	virtual void SetupInputComponent() override;
 	virtual void BeginPlay() override;
@@ -32,6 +31,8 @@ protected:
 
 
 public:
+	void ShowReturnToMainMenu();
+	
 	void SetHUDHealth(float Health, float MaxHealth);
 	void SetHUDShield(float Shield, float MaxShield);
 	void SetHUDGrenadeCooldown(float ThrowCooldownTime, float ThrowMaxCooldownTime);
@@ -108,6 +109,8 @@ private:
 	void HandleMatchHasStarted();
 	void HandleCooldown();
 	
+	class ABlasterHUD* GetSafeHUD();
+	
 public:
 	float SingleTripTime = 0.f;
 	
@@ -131,6 +134,17 @@ protected:
 	float TimeSyncRunningTime = 0.f;
 	
 private:
+	UPROPERTY(EditAnywhere, Category = "Combat|HUD")
+	TSubclassOf<class UUserWidget> ReturnToMainMenuWidget;
+	
+	UPROPERTY()
+	class UReturnToMainMenu* ReturnToMainMenu;
+	
+	bool bReturnToMainMenuOpen = false;
+	
+	UPROPERTY(EditAnywhere, Category = "Combat|Input")
+	class UInputAction* ReturnAndQuit;
+	
 	UPROPERTY()
 	class ABlasterHUD* BlasterHUD;
 
