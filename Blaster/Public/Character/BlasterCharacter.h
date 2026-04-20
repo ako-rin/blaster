@@ -21,6 +21,8 @@ class UBlasterAnimInstance;
 class USoundCue;
 class ULagCompensationComponent;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLeftGame);
+
 UCLASS()
 class BLASTER_API ABlasterCharacter : public ACharacter, public IInteractWithCrosshairsInterface
 {
@@ -74,10 +76,13 @@ public:
 
 	virtual void OnRep_ReplicatedMovement() override;
 	
+	UFUNCTION(Server, Reliable)
+	void ServerLeaveGame();
+	
 	UFUNCTION(NetMulticast, Reliable)
-	void MulticastElim();
+	void MulticastElim(bool bPlayerLeftGame);
 
-	void Elim();
+	void Elim(bool bPlayerLeftGame);
 	
 	void SetOverlappingWeapon(AWeapon* Weapon);
 	
@@ -204,6 +209,9 @@ public:
 		
 	UPROPERTY()
 	TMap<FName, class UBoxComponent*> HitCollisionBoxes;
+	
+	bool bLeftGame = false;
+	FOnLeftGame OnLeftGame;
 	
 protected:
 		
@@ -340,7 +348,7 @@ private:
 
 	UPROPERTY(VisibleAnywhere)
 	UTimelineComponent* DissolveTimeline;
-
+	
 	/**
 	 * Overlapping Weapon
 	 */

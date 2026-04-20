@@ -467,13 +467,105 @@ void ABlasterCharacter::DoDrop()
 	
 }
 
-void ABlasterCharacter::Elim()
+void ABlasterCharacter::ServerLeaveGame_Implementation()
+{
+	BlasterPlayerState = BlasterPlayerState == nullptr ? GetPlayerState<ABlasterPlayerState>() : BlasterPlayerState;
+	ABlasterGameMode* BlasterGameMode = GetWorld()->GetAuthGameMode<ABlasterGameMode>();
+	if (BlasterGameMode && BlasterPlayerState)
+	{
+		BlasterGameMode->PlayerLeftGame(BlasterPlayerState);
+	}
+	if (bLeftGame && IsLocallyControlled())
+	{
+		OnLeftGame.Broadcast();
+	}
+}
+
+void ABlasterCharacter::Elim(bool bPlayerLeftGame)
 {
 	
 	DropOrDestroyWeapons();
 	
-	MulticastElim();
+	MulticastElim(bPlayerLeftGame);
+}
+
+void ABlasterCharacter::MulticastElim_Implementation(bool bPlayerLeftGame)
+{
+	bLeftGame = bPlayerLeftGame;
+	
+	if (BlasterPlayerController)
+	{
+		BlasterPlayerController->SetHUDAmmo(0);
+	}
+
+	bElimmed = true;
+	
+	if (UBlasterAnimInstance* AnimInstance = GetAnimInstance())
+	{
+		AnimInstance->PlayElimMontage();
+	}
+
+	// Start Dissolve
+	StartDissolve();
+	
+	// Disable Movement
+	SetDisableCharacterGameplay(true);
+	
+	GetCharacterMovement()->DisableMovement();
+	GetCharacterMovement()->StopMovementImmediately();
+	if (BlasterPlayerController)
+	{
+		BlasterPlayerController->RemoveDefaultActions();
+		bUseControllerRotationYaw = false;
+	}
+
+	// Disable Collision
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	// Spawn Elim Bot
+	if (ElimBotEffect)
+	{
+		FVector ElimBotSpawnPoint(GetActorLocation().X, GetActorLocation().Y, GetActorLocation().Z + ElimBotOffsetZ);
+		ElimBotComponent = UGameplayStatics::SpawnEmitterAtLocation(
+			GetWorld(),
+			ElimBotEffect,
+			ElimBotSpawnPoint,
+			GetActorRotation()
+		);
+	}
+
+	if (ElimBotSound)
+	{
+		UGameplayStatics::SpawnSoundAtLocation(
+			this,
+			ElimBotSound,
+			GetActorLocation()
+		);
+	}
+	const bool bHideSniperScope = IsLocallyControlled() 
+		&& Combat 
+		&& IsAiming()
+		&& Combat->EquippedWeapon 
+		&& Combat->EquippedWeapon->GetWeaponType() == EWeaponType::EWT_SniperRifle;
+	if (bHideSniperScope)
+	{
+		ShowSniperScopeWidget(false);
+	}
 	GetWorldTimerManager().SetTimer(ElimTimer, this, &ThisClass::ElimTimerFinished, ElimDelay);
+}
+
+void ABlasterCharacter::ElimTimerFinished()
+{
+	ABlasterGameMode* BlasterGameMode = GetWorld()->GetAuthGameMode<ABlasterGameMode>();
+	if (BlasterGameMode && !bLeftGame)
+	{
+		BlasterGameMode->RequestSpawn(this, GetController());
+	}
+	if (bLeftGame)
+	{
+		OnLeftGame.Broadcast();
+	}
 }
 
 void ABlasterCharacter::SetOverlappingWeapon(AWeapon* Weapon)
@@ -555,7 +647,7 @@ void ABlasterCharacter::OnRep_ReplicatedMovement()
 }
 
 void ABlasterCharacter::ReceiveDamage(AActor* DamageActor, float Damage, const UDamageType* DamageType,
-	class AController* InstigatorController, AActor* DamageCauser)
+                                      class AController* InstigatorController, AActor* DamageCauser)
 {
 
 	if (bElimmed) return; // 防止多次进行淘汰而进行多次积分
@@ -592,73 +684,6 @@ void ABlasterCharacter::ReceiveDamage(AActor* DamageActor, float Damage, const U
 			ABlasterPlayerController* AttackerController = Cast<ABlasterPlayerController>(InstigatorController);
 			GameMode->PlayerEliminated(this, BlasterPlayerController, AttackerController);
 		}
-	}
-}
-
-void ABlasterCharacter::MulticastElim_Implementation()
-{
-	if (BlasterPlayerController)
-	{
-		BlasterPlayerController->SetHUDAmmo(0);
-	}
-
-	bElimmed = true;
-	
-	if (UBlasterAnimInstance* AnimInstance = GetAnimInstance())
-	{
-		AnimInstance->PlayElimMontage();
-	}
-
-	// Start Dissolve
-	StartDissolve();
-	
-	// Disable Movement
-	SetDisableCharacterGameplay(true);
-	
-	GetCharacterMovement()->DisableMovement();
-	GetCharacterMovement()->StopMovementImmediately();
-	if (BlasterPlayerController)
-	{
-		BlasterPlayerController->RemoveDefaultActions();
-		bUseControllerRotationYaw = false;
-	}
-
-	// Disable Collision
-	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-
-	// Spawn Elim Bot
-	if (ElimBotEffect)
-	{
-		FVector ElimBotSpawnPoint(GetActorLocation().X, GetActorLocation().Y, GetActorLocation().Z + ElimBotOffsetZ);
-		ElimBotComponent = UGameplayStatics::SpawnEmitterAtLocation(
-			GetWorld(),
-			ElimBotEffect,
-			ElimBotSpawnPoint,
-			GetActorRotation()
-		);
-	}
-
-	if (ElimBotSound)
-	{
-		UGameplayStatics::SpawnSoundAtLocation(
-			this,
-			ElimBotSound,
-			GetActorLocation()
-		);
-	}
-	const bool bHideSniperScope = IsLocallyControlled() && Combat && Combat->EquippedWeapon && Combat->EquippedWeapon->GetWeaponType() == EWeaponType::EWT_SniperRifle;
-	if (bHideSniperScope)
-	{
-		ShowSniperScopeWidget(false);
-	}
-}
-
-void ABlasterCharacter::ElimTimerFinished()
-{
-	if (ABlasterGameMode* GameMode = GetWorld()->GetAuthGameMode<ABlasterGameMode>())
-	{
-		GameMode->RequestSpawn(this, GetController());
 	}
 }
 

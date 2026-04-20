@@ -21,6 +21,8 @@ public:
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void PlayerEliminated(class ABlasterCharacter* ElimmedCharacter, class ABlasterPlayerController* VictimController, ABlasterPlayerController* AttackerController);
 	virtual void RequestSpawn(class ACharacter* ElimmedCharacter, class AController* ElimmedController);
+	
+	void PlayerLeftGame(class ABlasterPlayerState* PlayerLeaving);
 
 	FORCEINLINE float GetWarmupTime() const {return WarmupTime;}
 	FORCEINLINE float GetMatchTime() const {return MatchTime;}
