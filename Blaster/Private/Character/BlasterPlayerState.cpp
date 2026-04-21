@@ -4,6 +4,7 @@
 #include "Character/BlasterPlayerState.h"
 #include "Character/BlasterCharacter.h"
 #include "Character/BlasterPlayerController.h"
+#include "GameFramework/GameStateBase.h"
 #include "Net/UnrealNetwork.h"
 
 void ABlasterPlayerState::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
@@ -48,6 +49,25 @@ void ABlasterPlayerState::OnRep_Team()
 	if (BlasterCharacter)
 	{
 		BlasterCharacter->UpdateTeamOutline();
+	}
+	
+	APlayerController* LocalPC = GetWorld()->GetFirstPlayerController();
+	if (!LocalPC || LocalPC->PlayerState != this)
+	{
+		return;
+	}
+	
+	AGameStateBase* GameState = GetWorld()->GetGameState();
+	if (GameState)
+	{
+		for (const APlayerState* PS : GameState->PlayerArray)
+		{
+			ABlasterCharacter* Char = Cast<ABlasterCharacter>(PS->GetPawn());
+			if (Char)
+			{
+				Char->UpdateTeamOutline();
+			}
+		}
 	}
 }
 

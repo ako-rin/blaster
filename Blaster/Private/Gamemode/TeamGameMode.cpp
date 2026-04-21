@@ -2,9 +2,36 @@
 
 
 #include "Gamemode/TeamGameMode.h"
+
+#include "Character/BlasterPlayerController.h"
 #include "GameState/BlasterGameState.h"
 #include "Character/BlasterPlayerState.h"
 #include "Kismet/GameplayStatics.h"
+
+ATeamGameMode::ATeamGameMode()
+{
+	bTeamsMatch = true;	
+}
+
+void ATeamGameMode::PlayerEliminated(class ABlasterCharacter* ElimmedCharacter,
+	class ABlasterPlayerController* VictimController, ABlasterPlayerController* AttackerController)
+{
+	ABlasterGameState* BGameState = Cast<ABlasterGameState>(UGameplayStatics::GetGameState(this));
+	ABlasterPlayerState* AttackerPlayerState = Cast<ABlasterPlayerState>(AttackerController->PlayerState);
+	if (BGameState && AttackerPlayerState)
+	{
+		if (AttackerPlayerState->GetTeam() == ETeam::ET_BlueTeam)
+		{
+			BGameState->BlueTeamScores();
+		}
+		if (AttackerPlayerState->GetTeam() == ETeam::ET_RedTeam)
+		{
+			BGameState->RedTeamScores();
+		}
+	}
+	
+	Super::PlayerEliminated(ElimmedCharacter, VictimController, AttackerController);
+}
 
 void ATeamGameMode::PostLogin(APlayerController* NewPlayer)
 {
@@ -47,6 +74,29 @@ void ATeamGameMode::Logout(AController* Exiting)
 			BGameState->BlueTeam.Remove(BPState);
 		}
 	}
+}
+
+float ATeamGameMode::CalculateDamage(AController* Attacker, AController* Victim, float BaseDamage)
+{
+	
+	ABlasterPlayerState* AttackerPState = Attacker->GetPlayerState<ABlasterPlayerState>();
+	ABlasterPlayerState* VictimPState = Victim->GetPlayerState<ABlasterPlayerState>();
+	if (VictimPState == nullptr || AttackerPState == nullptr) return BaseDamage;
+	
+	// Attack oneself
+	if (VictimPState == AttackerPState)
+	{
+		return BaseDamage;
+	}
+	
+	// Attack friendly forces
+	if (AttackerPState->GetTeam() == VictimPState->GetTeam())
+	{
+		return 0.f;
+	}
+	
+	// Attack Enemy
+	return Super::CalculateDamage(Attacker, Victim, BaseDamage);
 }
 
 void ATeamGameMode::HandleMatchHasStarted()

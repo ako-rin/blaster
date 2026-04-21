@@ -25,6 +25,9 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void OnRep_Pawn() override;
 	
+	UFUNCTION()
+	void OnRep_ShowTeamScores();
+	
 protected:
 	virtual void SetupInputComponent() override;
 	virtual void BeginPlay() override;
@@ -37,6 +40,11 @@ public:
 	
 	UFUNCTION(Client, Reliable)
 	void ClientElimAnnouncement(APlayerState* Attacker, APlayerState* Victim);
+	
+	void HideTeamScores();
+	void InitTeamScores();
+	void SetHUDRedTeamScore(int32 RedScore);
+	void SetHUDBlueTeamScore(int32 BlueScore);
 	
 	void SetHUDHealth(float Health, float MaxHealth);
 	void SetHUDShield(float Shield, float MaxShield);
@@ -53,7 +61,7 @@ public:
 
 	// 处理玩家加入游戏时，需要处理的逻辑
 	// 玩家有可能在游戏开始阶段加入，也有可能在热身阶段加入
-	void OnMatchStateSet(FName State);
+	void OnMatchStateSet(FName State, bool bTeamsMatch = false);
 
 	void PollInit();
 
@@ -111,13 +119,16 @@ protected:
 
 private:
 
-	void HandleMatchHasStarted();
+	void HandleMatchHasStarted(bool bTeamsMatch = false);
 	void HandleCooldown();
 	
 	class ABlasterHUD* GetSafeHUD();
 	
 public:
 	float SingleTripTime = 0.f;
+	
+	UPROPERTY(ReplicatedUsing=OnRep_ShowTeamScores)
+	bool bShowTeamScores = false;
 	
 	FHighPingDelegate HighPingDelegate;
 	

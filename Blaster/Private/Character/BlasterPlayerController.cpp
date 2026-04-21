@@ -24,7 +24,7 @@
 void ABlasterPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
 	BlasterHUD = Cast<ABlasterHUD>(GetHUD());
 	ServerCheckMatchState();
 }
@@ -41,32 +41,14 @@ void ABlasterPlayerController::Tick(float DeltaSeconds)
 
 	// 在角色 BeginPlay 时 HUD 还未准备好 
 	PollInit();
-	
+
 	CheckPing(DeltaSeconds);
-	
+
 	// 更新手雷时间
 	if (bCheckGrenadeCooldown)
 	{
 		UpdateHUDGrenadeCooldown();
 	}
-	
-	// if (HasAuthority()) 
-	// {
-	// 	BlasterHUD = Cast<ABlasterHUD>(GetHUD());
-	// 	if (BlasterHUD)
-	// 	{
-	// 		// 如果处于等待状态，但公告板没建出来，强行建！
-	// 		if (MatchState == MatchState::WaitingToStart && BlasterHUD->GetAnnouncement() == nullptr)
-	// 		{
-	// 			BlasterHUD->AddAnnouncement();
-	// 		}
-	// 		// 如果处于游戏中，但血条面板没建出来，强行建！
-	// 		else if (MatchState == MatchState::InProgress && BlasterHUD->GetCharacterOverlay() == nullptr)
-	// 		{
-	// 			HandleMatchHasStarted();
-	// 		}
-	// 	}
-	// }
 }
 
 void ABlasterPlayerController::ReceivedPlayer()
@@ -77,7 +59,6 @@ void ABlasterPlayerController::ReceivedPlayer()
 	{
 		ServerRequestServerTime(GetWorld()->GetTimeSeconds());
 	}
-	
 }
 
 void ABlasterPlayerController::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
@@ -85,20 +66,22 @@ void ABlasterPlayerController::GetLifetimeReplicatedProps(TArray<class FLifetime
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ABlasterPlayerController, MatchState);
+	DOREPLIFETIME(ABlasterPlayerController, bShowTeamScores);
 }
 
 void ABlasterPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
-	
+
 	// if DedicatedServer, will return false
 	if (!IsLocalController())
 		return;
 	AddDefaultActions();
-	
+
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(InputComponent))
 	{
-		EnhancedInputComponent->BindAction(ReturnAndQuit, ETriggerEvent::Triggered, this, &ThisClass::ShowReturnToMainMenu);
+		EnhancedInputComponent->BindAction(ReturnAndQuit, ETriggerEvent::Triggered, this,
+		                                   &ThisClass::ShowReturnToMainMenu);
 	}
 }
 
@@ -112,12 +95,12 @@ void ABlasterPlayerController::OnPossess(APawn* InPawn)
 	{
 		SetHUDHealth(BlasterCharacter->GetHealth(), BlasterCharacter->GetMaxHealth());
 		SetHUDShield(BlasterCharacter->GetShield(), BlasterCharacter->GetMaxShield());
-		
+
 		if (BlasterCharacter->GetCombat())
 		{
 			HUDMaxGrenadeCooldownTime = BlasterCharacter->GetCombat()->GetGrenadeMaxCooldownTime();
 			SetHUDGrenadeCooldown(HUDMaxGrenadeCooldownTime, HUDMaxGrenadeCooldownTime);
-			
+
 			if (BlasterCharacter->GetCombat()->EquippedWeapon)
 			{
 				SetHUDAmmo(BlasterCharacter->GetCombat()->EquippedWeapon->GetCurrentAmmo());
@@ -156,11 +139,71 @@ void ABlasterPlayerController::ShowReturnToMainMenu()
 			ReturnToMainMenu->MenuTearDown();
 		}
 	}
- }
+}
 
 void ABlasterPlayerController::BroadcastElim(APlayerState* Attacker, APlayerState* Victim)
 {
 	ClientElimAnnouncement(Attacker, Victim);
+}
+
+void ABlasterPlayerController::HideTeamScores()
+{
+	BlasterHUD = GetSafeHUD();
+	bool bHUDValid = BlasterHUD
+		&& BlasterHUD->GetCharacterOverlay()
+		&& BlasterHUD->GetCharacterOverlay()->RedTeamScore
+		&& BlasterHUD->GetCharacterOverlay()->BlueTeamScore
+		&& BlasterHUD->GetCharacterOverlay()->ScoreSpacerText;
+	if (bHUDValid)
+	{
+		BlasterHUD->GetCharacterOverlay()->RedTeamScore->SetText(FText());
+		BlasterHUD->GetCharacterOverlay()->BlueTeamScore->SetText(FText());
+		BlasterHUD->GetCharacterOverlay()->ScoreSpacerText->SetText(FText());
+	}
+}
+
+void ABlasterPlayerController::InitTeamScores()
+{
+	BlasterHUD = GetSafeHUD();
+	bool bHUDValid = BlasterHUD
+		&& BlasterHUD->GetCharacterOverlay()
+		&& BlasterHUD->GetCharacterOverlay()->RedTeamScore
+		&& BlasterHUD->GetCharacterOverlay()->BlueTeamScore
+		&& BlasterHUD->GetCharacterOverlay()->ScoreSpacerText;
+	if (bHUDValid)
+	{
+		FString Zero("0");
+		FString Spacer("|");
+		BlasterHUD->GetCharacterOverlay()->RedTeamScore->SetText(FText::FromString(Zero));
+		BlasterHUD->GetCharacterOverlay()->BlueTeamScore->SetText(FText::FromString(Zero));
+		BlasterHUD->GetCharacterOverlay()->ScoreSpacerText->SetText(FText::FromString(Spacer));
+	}
+}
+
+void ABlasterPlayerController::SetHUDRedTeamScore(int32 RedScore)
+{
+	BlasterHUD = GetSafeHUD();
+	bool bHUDValid = BlasterHUD
+		&& BlasterHUD->GetCharacterOverlay()
+		&& BlasterHUD->GetCharacterOverlay()->RedTeamScore;
+	if (bHUDValid)
+	{
+		FString ScoreText = FString::Printf(TEXT("%d"), RedScore);
+		BlasterHUD->GetCharacterOverlay()->RedTeamScore->SetText(FText::FromString(ScoreText));
+	}
+}
+
+void ABlasterPlayerController::SetHUDBlueTeamScore(int32 BlueScore)
+{
+	BlasterHUD = GetSafeHUD();
+	bool bHUDValid = BlasterHUD
+		&& BlasterHUD->GetCharacterOverlay()
+		&& BlasterHUD->GetCharacterOverlay()->BlueTeamScore;
+	if (bHUDValid)
+	{
+		FString ScoreText = FString::Printf(TEXT("%d"), BlueScore);
+		BlasterHUD->GetCharacterOverlay()->BlueTeamScore->SetText(FText::FromString(ScoreText));
+	}
 }
 
 void ABlasterPlayerController::ClientElimAnnouncement_Implementation(APlayerState* Attacker, APlayerState* Victim)
@@ -214,16 +257,15 @@ void ABlasterPlayerController::SetHUDHealth(float Health, float MaxHealth)
 		&& BlasterHUD->GetCharacterOverlay()->HealthBar
 		&& BlasterHUD->GetCharacterOverlay()->HealthText;
 
-	if (bHUDValid) 
+	if (bHUDValid)
 	{
 		bInitializeHealth = false;
-		
+
 		const float HealthPercent = Health / MaxHealth;
 		BlasterHUD->GetCharacterOverlay()->HealthBar->SetPercent(HealthPercent);
-		
+
 		FString HealthText = FString::Printf(TEXT("%d/%d"), FMath::CeilToInt(Health), FMath::CeilToInt(MaxHealth));
 		BlasterHUD->GetCharacterOverlay()->HealthText->SetText(FText::FromString(HealthText));
-		
 	}
 	else
 	{
@@ -242,16 +284,15 @@ void ABlasterPlayerController::SetHUDShield(float Shield, float MaxShield)
 		&& BlasterHUD->GetCharacterOverlay()->ShieldBar
 		&& BlasterHUD->GetCharacterOverlay()->ShieldText;
 
-	if (bHUDValid) 
+	if (bHUDValid)
 	{
 		bInitializeShield = false;
-		
+
 		const float ShieldPercent = Shield / MaxShield;
 		BlasterHUD->GetCharacterOverlay()->ShieldBar->SetPercent(ShieldPercent);
-		
+
 		FString ShieldText = FString::Printf(TEXT("%d/%d"), FMath::CeilToInt(Shield), FMath::CeilToInt(MaxShield));
 		BlasterHUD->GetCharacterOverlay()->ShieldText->SetText(FText::FromString(ShieldText));
-		
 	}
 	else
 	{
@@ -266,9 +307,9 @@ void ABlasterPlayerController::SetHUDScore(float Score)
 	// BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
 	BlasterHUD = GetSafeHUD();
 	bool bHUDValid = BlasterHUD
-	&& BlasterHUD->GetCharacterOverlay()
-	&& BlasterHUD->GetCharacterOverlay()->ScoreText
-	&& BlasterHUD->GetCharacterOverlay()->ScoreAmount;
+		&& BlasterHUD->GetCharacterOverlay()
+		&& BlasterHUD->GetCharacterOverlay()->ScoreText
+		&& BlasterHUD->GetCharacterOverlay()->ScoreAmount;
 
 	if (bHUDValid)
 	{
@@ -288,9 +329,9 @@ void ABlasterPlayerController::SetHUDDefeats(int32 Defeats)
 	// BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
 	BlasterHUD = GetSafeHUD();
 	bool bHUDValid = BlasterHUD
-	&& BlasterHUD->GetCharacterOverlay()
-	&& BlasterHUD->GetCharacterOverlay()->DefeatsText
-	&& BlasterHUD->GetCharacterOverlay()->DefeatsAmount;
+		&& BlasterHUD->GetCharacterOverlay()
+		&& BlasterHUD->GetCharacterOverlay()->DefeatsText
+		&& BlasterHUD->GetCharacterOverlay()->DefeatsAmount;
 
 	if (bHUDValid)
 	{
@@ -310,9 +351,9 @@ void ABlasterPlayerController::SetHUDAmmo(int32 Ammo)
 	// BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
 	BlasterHUD = GetSafeHUD();
 	bool bHUDValid = BlasterHUD
-	&& BlasterHUD->GetCharacterOverlay()
-	&& BlasterHUD->GetCharacterOverlay()->AmmoText
-	&& BlasterHUD->GetCharacterOverlay()->AmmoAmount;
+		&& BlasterHUD->GetCharacterOverlay()
+		&& BlasterHUD->GetCharacterOverlay()->AmmoText
+		&& BlasterHUD->GetCharacterOverlay()->AmmoAmount;
 
 	if (bHUDValid)
 	{
@@ -332,8 +373,8 @@ void ABlasterPlayerController::SetHUDCarriedAmmo(int32 Ammo)
 	// BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
 	BlasterHUD = GetSafeHUD();
 	bool bHUDValid = BlasterHUD
-	&& BlasterHUD->GetCharacterOverlay()
-	&& BlasterHUD->GetCharacterOverlay()->CarriedAmmoAmount;
+		&& BlasterHUD->GetCharacterOverlay()
+		&& BlasterHUD->GetCharacterOverlay()->CarriedAmmoAmount;
 
 	if (bHUDValid)
 	{
@@ -353,8 +394,8 @@ void ABlasterPlayerController::SetHUDMatchCountdown(float CountdownTime)
 	// BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
 	BlasterHUD = GetSafeHUD();
 	bool bHUDValid = BlasterHUD
-	&& BlasterHUD->GetCharacterOverlay()
-	&& BlasterHUD->GetCharacterOverlay()->MatchCountdownText;
+		&& BlasterHUD->GetCharacterOverlay()
+		&& BlasterHUD->GetCharacterOverlay()->MatchCountdownText;
 
 	if (bHUDValid)
 	{
@@ -366,7 +407,7 @@ void ABlasterPlayerController::SetHUDMatchCountdown(float CountdownTime)
 
 		int32 Minutes = FMath::FloorToInt(CountdownTime / 60.f);
 		int32 Seconds = FMath::FloorToInt(CountdownTime - Minutes * 60.f); // 向下取整
-		
+
 		const FString CountdownText = FString::Printf(TEXT("%02d : %02d"), Minutes, Seconds);
 		BlasterHUD->GetCharacterOverlay()->MatchCountdownText->SetText(FText::FromString(CountdownText));
 	}
@@ -377,8 +418,8 @@ void ABlasterPlayerController::SetHUDAnnouncementCountdown(float CountdownTime)
 	// BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
 	BlasterHUD = GetSafeHUD();
 	bool bHUDValid = BlasterHUD
-	&& BlasterHUD->GetAnnouncement()
-	&& BlasterHUD->GetAnnouncement()->WarmupTime;
+		&& BlasterHUD->GetAnnouncement()
+		&& BlasterHUD->GetAnnouncement()->WarmupTime;
 
 	if (bHUDValid)
 	{
@@ -387,10 +428,10 @@ void ABlasterPlayerController::SetHUDAnnouncementCountdown(float CountdownTime)
 			BlasterHUD->GetAnnouncement()->WarmupTime->SetText(FText());
 			return;
 		}
-		
+
 		int32 Minutes = FMath::FloorToInt(CountdownTime / 60.f);
 		int32 Seconds = FMath::FloorToInt(CountdownTime - Minutes * 60.f); // 向下取整
-		
+
 		const FString CountdownText = FString::Printf(TEXT("%02d : %02d"), Minutes, Seconds);
 		BlasterHUD->GetAnnouncement()->WarmupTime->SetText(FText::FromString(CountdownText));
 	}
@@ -404,10 +445,10 @@ void ABlasterPlayerController::SetHUDGrenadeCooldown(float ThrowCooldownTime, fl
 		&& BlasterHUD->GetCharacterOverlay()
 		&& BlasterHUD->GetCharacterOverlay()->GrenadeProgressBar;
 
-	if (bHUDValid) 
+	if (bHUDValid)
 	{
 		bInitializeGrenade = false;
-		
+
 		const float CooldownPercent = ThrowCooldownTime / ThrowMaxCooldownTime;
 		BlasterHUD->GetCharacterOverlay()->GrenadeProgressBar->SetPercent(CooldownPercent);
 	}
@@ -459,13 +500,15 @@ void ABlasterPlayerController::SetHUDTime()
 
 	if (HasAuthority())
 	{
-		BlasterGameMode = BlasterGameMode == nullptr ? Cast<ABlasterGameMode>(UGameplayStatics::GetGameMode(this)) : BlasterGameMode;
+		BlasterGameMode = BlasterGameMode == nullptr
+			                  ? Cast<ABlasterGameMode>(UGameplayStatics::GetGameMode(this))
+			                  : BlasterGameMode;
 		if (BlasterGameMode)
 		{
 			SecondsLeft = FMath::CeilToInt(BlasterGameMode->GetCountdownTime() + LevelStartingTime);
 		}
 	}
-	
+
 	if (CountdownInt != SecondsLeft)
 	{
 		if (MatchState == MatchState::WaitingToStart || MatchState == MatchState::Cooldown)
@@ -473,13 +516,11 @@ void ABlasterPlayerController::SetHUDTime()
 			SetHUDAnnouncementCountdown(TimeLeft);
 		}
 		if (MatchState == MatchState::InProgress)
-                          		{
+		{
 			SetHUDMatchCountdown(TimeLeft);
 		}
-		
 	}
 	CountdownInt = SecondsLeft;
-	
 }
 
 void ABlasterPlayerController::HighPingWarning()
@@ -491,7 +532,7 @@ void ABlasterPlayerController::HighPingWarning()
 		&& BlasterHUD->GetCharacterOverlay()->HighPingIcon
 		&& BlasterHUD->GetCharacterOverlay()->HighPingAnimation;
 
-	if (bHUDValid) 
+	if (bHUDValid)
 	{
 		BlasterHUD->GetCharacterOverlay()->HighPingIcon->SetOpacity(1.f);
 		BlasterHUD->GetCharacterOverlay()->PlayAnimation(
@@ -511,7 +552,7 @@ void ABlasterPlayerController::StopHighPingWarning()
 		&& BlasterHUD->GetCharacterOverlay()->HighPingIcon
 		&& BlasterHUD->GetCharacterOverlay()->HighPingAnimation;
 
-	if (bHUDValid) 
+	if (bHUDValid)
 	{
 		BlasterHUD->GetCharacterOverlay()->HighPingIcon->SetOpacity(0.f);
 		if (BlasterHUD->GetCharacterOverlay()->IsAnimationPlaying(BlasterHUD->GetCharacterOverlay()->HighPingAnimation))
@@ -543,12 +584,12 @@ void ABlasterPlayerController::CheckPing(float DeltaTime)
 		}
 		HighPingRunningTime = 0.f;
 	}
-	
-	bool bHighPingAnimationPlaying = BlasterHUD 
-			&& BlasterHUD->GetCharacterOverlay() 
-			&& BlasterHUD->GetCharacterOverlay()->HighPingAnimation 
-			&& BlasterHUD->GetCharacterOverlay()->IsAnimationPlaying(BlasterHUD->GetCharacterOverlay()->HighPingAnimation);
-	if (bHighPingAnimationPlaying)	
+
+	bool bHighPingAnimationPlaying = BlasterHUD
+		&& BlasterHUD->GetCharacterOverlay()
+		&& BlasterHUD->GetCharacterOverlay()->HighPingAnimation
+		&& BlasterHUD->GetCharacterOverlay()->IsAnimationPlaying(BlasterHUD->GetCharacterOverlay()->HighPingAnimation);
+	if (bHighPingAnimationPlaying)
 	{
 		PingAnimationRunningTime += DeltaTime;
 		if (PingAnimationRunningTime > HighPingDuration)
@@ -565,10 +606,146 @@ void ABlasterPlayerController::ServerReportPingStatus_Implementation(bool bHighP
 	HighPingDelegate.Broadcast(bHighPing);
 }
 
+class ABlasterHUD* ABlasterPlayerController::GetSafeHUD()
+{
+	if (!IsValid(BlasterHUD) || BlasterHUD->GetWorld() != GetWorld())
+	{
+		BlasterHUD = Cast<ABlasterHUD>(GetHUD());
+	}
+	return BlasterHUD;
+}
 
-void ABlasterPlayerController::HandleMatchHasStarted()
+void ABlasterPlayerController::PollInit()
+{
+	BlasterHUD = GetSafeHUD();
+	if (BlasterHUD && BlasterHUD->GetCharacterOverlay())
+	{
+		CharacterOverlay = BlasterHUD->GetCharacterOverlay();
+		if (CharacterOverlay)
+		{
+			if (bInitializeHealth) SetHUDHealth(HUDHealth, HUDMaxHealth);
+			if (bInitializeScore) SetHUDScore(HUDScore);
+			if (bInitializeDefeats) SetHUDDefeats(HUDDefeats);
+			if (bInitializeAmmo) SetHUDAmmo(HUDAmmo);
+			if (bInitializeCarriedAmmo) SetHUDCarriedAmmo(HUDCarriedAmmo);
+			if (bInitializeGrenade) SetHUDGrenadeCooldown(HUDGrenadeCooldownTime, HUDMaxGrenadeCooldownTime);
+			if (bInitializeShield) SetHUDShield(HUDShield, HUDMaxShield);
+		}
+	}
+}
+
+void ABlasterPlayerController::RemoveDefaultActions()
+{
+	if (ABlasterCharacter* BlasterCharacter = Cast<ABlasterCharacter>(GetPawn()))
+	{
+		BlasterCharacter->FireReleased();
+		BlasterCharacter->AimReleased();
+		BlasterCharacter->CrouchReleased();
+		BlasterCharacter->WalkReleased();
+	}
+
+	if (!IsLocalController()) return;
+	InputSubsystem = InputSubsystem == nullptr
+		                 ? ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer())
+		                 : InputSubsystem;
+	if (InputSubsystem)
+	{
+		InputSubsystem->RemoveMappingContext(DefaultMappingContexts);
+	}
+}
+
+void ABlasterPlayerController::AddDefaultActions()
+{
+	if (!IsLocalController()) return;
+
+	InputSubsystem = InputSubsystem == nullptr
+		                 ? ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer())
+		                 : InputSubsystem;
+	if (InputSubsystem)
+	{
+		InputSubsystem->ClearAllMappings();
+
+		if (DefaultMappingContexts)
+		{
+			InputSubsystem->AddMappingContext(DefaultMappingContexts, 0);
+		}
+		if (MouseLookMappingContexts)
+		{
+			InputSubsystem->AddMappingContext(MouseLookMappingContexts, 1);
+		}
+	}
+}
+
+// begin play
+void ABlasterPlayerController::ServerCheckMatchState_Implementation()
+{
+	if (ABlasterGameMode* GameMode = Cast<ABlasterGameMode>(UGameplayStatics::GetGameMode(this)))
+	{
+		WarmupTime = GameMode->GetWarmupTime();
+		MatchTime = GameMode->GetMatchTime();
+		LevelStartingTime = GameMode->GetLevelStartingTime();
+		CooldownTime = GameMode->GetCooldownTime();
+		MatchState = GameMode->GetMatchState();
+
+		ClientJoinMidgame(MatchState, WarmupTime, MatchTime, CooldownTime, LevelStartingTime);
+	}
+}
+
+void ABlasterPlayerController::ClientJoinMidgame_Implementation(FName StateOfMatch, float Warmup, float Match,
+                                                                float Cooldown, float StartingTime)
+{
+	WarmupTime = Warmup;
+	MatchTime = Match;
+	CooldownTime = Cooldown;
+	LevelStartingTime = StartingTime;
+	MatchState = StateOfMatch;
+
+	OnMatchStateSet(MatchState);
+}
+
+// GameMode also call the function
+void ABlasterPlayerController::OnMatchStateSet(FName State, bool bTeamsMatch)
+{
+	MatchState = State;
+
+	if (HasAuthority() && MatchState == MatchState::WaitingToStart)
+	{
+		if (ABlasterGameMode* GameMode = Cast<ABlasterGameMode>(UGameplayStatics::GetGameMode(this)))
+		{
+			WarmupTime = GameMode->GetWarmupTime();
+			MatchTime = GameMode->GetMatchTime();
+			LevelStartingTime = GameMode->GetLevelStartingTime();
+			CooldownTime = GameMode->GetCooldownTime();
+		}
+	}
+
+	if (MatchState == MatchState::WaitingToStart)
+	{
+		BlasterHUD = GetSafeHUD();
+		if (BlasterHUD)
+		{
+			BlasterHUD->AddAnnouncement();
+		}
+	}
+	else if (MatchState == MatchState::InProgress)
+	{
+		HandleMatchHasStarted(bTeamsMatch);
+	}
+	else if (MatchState == MatchState::Cooldown)
+	{
+		HandleCooldown();
+	}
+}
+
+
+void ABlasterPlayerController::HandleMatchHasStarted(bool bTeamsMatch)
 {
 	// BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
+	if (HasAuthority())
+	{
+		bShowTeamScores = bTeamsMatch;
+	}
+	
 	BlasterHUD = GetSafeHUD();
 	if (BlasterHUD)
 	{
@@ -582,12 +759,41 @@ void ABlasterPlayerController::HandleMatchHasStarted()
 			BlasterHUD->AddAnnouncement();
 			BlasterHUD->GetAnnouncement()->SetVisibility(ESlateVisibility::Hidden);
 		}
+
+		if (!HasAuthority())
+		{
+			return;
+		}
+		
+		if (bTeamsMatch)
+		{
+			InitTeamScores();
+		}
+		else
+		{
+			HideTeamScores();
+		}
+	}
+}
+
+void ABlasterPlayerController::OnRep_ShowTeamScores()
+{
+	if (bShowTeamScores)
+	{
+		InitTeamScores();
+	}
+	else
+	{
+		HideTeamScores();
 	}
 }
 
 void ABlasterPlayerController::HandleCooldown()
 {
 	// BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
+
+	RemoveDefaultActions();
+
 	BlasterHUD = GetSafeHUD();
 	if (BlasterHUD)
 	{
@@ -595,16 +801,16 @@ void ABlasterPlayerController::HandleCooldown()
 		{
 			BlasterHUD->GetCharacterOverlay()->RemoveFromParent();
 		}
-		
+
 		if (BlasterHUD->GetAnnouncement() == nullptr)
 		{
 			BlasterHUD->AddAnnouncement();
 			BlasterHUD->GetAnnouncement()->SetVisibility(ESlateVisibility::Hidden);
 		}
-		
+
 		bool bHUDValid = BlasterHUD->GetAnnouncement() &&
 			BlasterHUD->GetAnnouncement()->AnnouncementText &&
-				BlasterHUD->GetAnnouncement()->InfoText;
+			BlasterHUD->GetAnnouncement()->InfoText;
 		if (bHUDValid)
 		{
 			BlasterHUD->GetAnnouncement()->SetVisibility(ESlateVisibility::Visible);
@@ -617,7 +823,7 @@ void ABlasterPlayerController::HandleCooldown()
 				if (ABlasterGameState* BlasterGameState = Cast<ABlasterGameState>(UGameplayStatics::GetGameState(this)))
 				{
 					TArray<ABlasterPlayerState*> TopPlayers = BlasterGameState->TopScoringPlayers;
-					FString InfoTextString;					
+					FString InfoTextString;
 					if (TopPlayers.Num() == 0)
 					{
 						InfoTextString = FString("There is no winner.");
@@ -646,165 +852,9 @@ void ABlasterPlayerController::HandleCooldown()
 		}
 	}
 
-	RemoveDefaultActions();
-	
 	if (ABlasterCharacter* BlasterCharacter = Cast<ABlasterCharacter>(GetPawn()))
 	{
 		BlasterCharacter->SetDisableCharacterGameplay(true);
-	}
-}
-
-class ABlasterHUD* ABlasterPlayerController::GetSafeHUD()
-{
-	if (!IsValid(BlasterHUD) || BlasterHUD->GetWorld() != GetWorld())
-	{
-		BlasterHUD = Cast<ABlasterHUD>(GetHUD());
-	}
-	return BlasterHUD;
-}
-
-void ABlasterPlayerController::PollInit()
-{
-	BlasterHUD = GetSafeHUD();	
-	if (BlasterHUD && BlasterHUD->GetCharacterOverlay())
-	{
-		CharacterOverlay = BlasterHUD->GetCharacterOverlay();
-		if (CharacterOverlay)
-		{
-			if (bInitializeHealth) SetHUDHealth(HUDHealth, HUDMaxHealth);
-			if (bInitializeScore)	SetHUDScore(HUDScore);
-			if (bInitializeDefeats)	SetHUDDefeats(HUDDefeats);
-			if (bInitializeAmmo)	SetHUDAmmo(HUDAmmo);
-			if (bInitializeCarriedAmmo)	SetHUDCarriedAmmo(HUDCarriedAmmo);
-			if (bInitializeGrenade) SetHUDGrenadeCooldown(HUDGrenadeCooldownTime, HUDMaxGrenadeCooldownTime);
-			if (bInitializeShield) SetHUDShield(HUDShield, HUDMaxShield);
-		}
-	}
-}
-
-void ABlasterPlayerController::RemoveDefaultActions()
-{
-	if (ABlasterCharacter* BlasterCharacter = Cast<ABlasterCharacter>(GetPawn()))
-	{
-		BlasterCharacter->FireReleased();
-		BlasterCharacter->AimReleased();
-		BlasterCharacter->CrouchReleased();
-		BlasterCharacter->WalkReleased();
-	}
-	InputSubsystem = InputSubsystem == nullptr ? ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()) : InputSubsystem;
-	if (InputSubsystem)
-	{
-		InputSubsystem->RemoveMappingContext(DefaultMappingContexts);
-	}
-}
-
-void ABlasterPlayerController::AddDefaultActions()
-{
-	InputSubsystem = InputSubsystem == nullptr ? ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()) : InputSubsystem;
-	if (InputSubsystem)
-	{
-		InputSubsystem->ClearAllMappings();
-
-		if (DefaultMappingContexts)
-		{
-			InputSubsystem->AddMappingContext(DefaultMappingContexts, 0);			
-		}
-		if (MouseLookMappingContexts)
-		{
-			InputSubsystem->AddMappingContext(MouseLookMappingContexts, 1);
-		}
-	}
-}
-
-// begin play
-void ABlasterPlayerController::ServerCheckMatchState_Implementation()
-{
-	if (ABlasterGameMode* GameMode = Cast<ABlasterGameMode>(UGameplayStatics::GetGameMode(this)))
-	{
-		WarmupTime = GameMode->GetWarmupTime();
-		MatchTime = GameMode->GetMatchTime();
-		LevelStartingTime = GameMode->GetLevelStartingTime();
-		CooldownTime = GameMode->GetCooldownTime();
-		MatchState = GameMode->GetMatchState();
-
-		ClientJoinMidgame(MatchState, WarmupTime, MatchTime, CooldownTime, LevelStartingTime);
-
-		if (BlasterHUD && MatchState == MatchState::WaitingToStart)
-		{
-			// Owning Connection is self ,Client will call this function ↓
-			// BlasterHUD->AddAnnouncement();
-		}
-		else if (BlasterHUD && MatchState == MatchState::Cooldown)
-		{
-			// Owning Connection is self ,Client will call this function ↓
-			// InputSubsystem = InputSubsystem == nullptr ? ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()) : InputSubsystem;
-			// if (InputSubsystem)
-			// {
-			// 	InputSubsystem->RemoveMappingContext(DefaultMappingContexts);
-			// }
-		}
-	}
-}
-
-void ABlasterPlayerController::ClientJoinMidgame_Implementation(FName StateOfMatch, float Warmup, float Match, float Cooldown, float StartingTime)
-{
-	WarmupTime = Warmup;
-	MatchTime = Match;
-	CooldownTime = Cooldown;
-	LevelStartingTime = StartingTime;
-	MatchState = StateOfMatch;
-	
-	OnMatchStateSet(MatchState);
-	
-	BlasterHUD = GetSafeHUD();
-
-	if (BlasterHUD && MatchState == MatchState::WaitingToStart)
-	{
-		BlasterHUD->AddAnnouncement();
-	}
-
-	else if (BlasterHUD && MatchState == MatchState::InProgress)
-	{
-
-	}
-
-	else if (BlasterHUD && MatchState == MatchState::Cooldown)
-	{
-		InputSubsystem = InputSubsystem == nullptr ? ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()) : InputSubsystem;
-		if (InputSubsystem)
-		{
-			InputSubsystem->RemoveMappingContext(DefaultMappingContexts);
-		}
-	}
-}
-
-void ABlasterPlayerController::OnMatchStateSet(FName State)
-{
-	MatchState = State;
-
-	if (HasAuthority() && MatchState == MatchState::WaitingToStart)
-	{
-		if (ABlasterGameMode* GameMode = Cast<ABlasterGameMode>(UGameplayStatics::GetGameMode(this)))
-		{
-			WarmupTime = GameMode->GetWarmupTime();
-			MatchTime = GameMode->GetMatchTime();
-			LevelStartingTime = GameMode->GetLevelStartingTime();
-			CooldownTime = GameMode->GetCooldownTime();
-		}
-	}
-	
-	if (MatchState == MatchState::WaitingToStart)
-	{
-		
-	}
-
-	else if (MatchState == MatchState::InProgress)
-	{
-		HandleMatchHasStarted();
-	}
-	else if (MatchState == MatchState::Cooldown)
-	{
-		HandleCooldown();
 	}
 }
 
@@ -843,13 +893,11 @@ void ABlasterPlayerController::ServerRequestServerTime_Implementation(float TIme
 }
 
 void ABlasterPlayerController::ClientReportServerTime_Implementation(float TimeOfClientRequest,
-	float TimeServerReceivedClientRequest)
+                                                                     float TimeServerReceivedClientRequest)
 {
 	float RoundTripTime = GetWorld()->GetTimeSeconds() - TimeOfClientRequest;
 	SingleTripTime = 0.5f * RoundTripTime;
-	
+
 	float CurrentServerTime = TimeServerReceivedClientRequest + SingleTripTime;
 	ClientServerDelta = CurrentServerTime - GetWorld()->GetTimeSeconds();
 }
-
-

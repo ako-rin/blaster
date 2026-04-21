@@ -40,6 +40,8 @@ public:
 	virtual void Destroyed() override;
 	virtual void BeginPlay() override;
 	
+	// When Controller Attach the Character, PossessedBy will be called
+	// Only on Server
 	virtual void PossessedBy(AController* NewController) override;
 
 	virtual void Jump() override;
@@ -450,6 +452,9 @@ private:
 	UPROPERTY()
 	class ABlasterPlayerState* BlasterPlayerState;
 
+	UPROPERTY()
+	class ABlasterGameMode* BlasterGameMode;
+	
 	/**
 	 * Gameplay
 	 */

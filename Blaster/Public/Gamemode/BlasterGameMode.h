@@ -23,12 +23,16 @@ public:
 	virtual void RequestSpawn(class ACharacter* ElimmedCharacter, class AController* ElimmedController);
 	
 	void PlayerLeftGame(class ABlasterPlayerState* PlayerLeaving);
+	virtual float CalculateDamage(AController* Attacker, AController* Victim, float BaseDamage);
 
 	FORCEINLINE float GetWarmupTime() const {return WarmupTime;}
 	FORCEINLINE float GetMatchTime() const {return MatchTime;}
 	FORCEINLINE float GetCooldownTime() const {return CooldownTime;}
 	FORCEINLINE float GetLevelStartingTime() const {return LevelStartingTime;}
 	FORCEINLINE float GetCountdownTime() const {return CountdownTime;}
+	
+public:
+	bool bTeamsMatch = false;
 
 protected:
 	virtual void BeginPlay() override;

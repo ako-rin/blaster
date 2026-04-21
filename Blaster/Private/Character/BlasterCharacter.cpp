@@ -64,6 +64,9 @@ ABlasterCharacter::ABlasterCharacter()
 	GetMesh()->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
 	GetMesh()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 	GetMesh()->SetCollisionResponseToChannel(ECC_LagCompensation, ECR_Ignore);
+	GetMesh()->SetRenderCustomDepth(true);
+	GetMesh()->SetCustomDepthStencilValue(0);
+	
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_LagCompensation, ECR_Ignore);
 	
@@ -232,6 +235,7 @@ void ABlasterCharacter::BeginPlay()
 	ShowAttachedGrenade(false);
 }
 
+// Only Server
 void ABlasterCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
@@ -275,7 +279,7 @@ void ABlasterCharacter::Destroyed()
 		ElimBotComponent->DestroyComponent();
 	}
 
-	ABlasterGameMode* BlasterGameMode = Cast<ABlasterGameMode>(UGameplayStatics::GetGameMode(this));
+	BlasterGameMode = BlasterGameMode == nullptr ? GetWorld()->GetAuthGameMode<ABlasterGameMode>() : BlasterGameMode;
 	bool bMatchNotInProgress = BlasterGameMode && BlasterGameMode->GetMatchState() != MatchState::InProgress;
 
 	if (Combat && Combat->EquippedWeapon && bMatchNotInProgress)
@@ -481,7 +485,7 @@ void ABlasterCharacter::DoDrop()
 void ABlasterCharacter::ServerLeaveGame_Implementation()
 {
 	BlasterPlayerState = BlasterPlayerState == nullptr ? GetPlayerState<ABlasterPlayerState>() : BlasterPlayerState;
-	ABlasterGameMode* BlasterGameMode = GetWorld()->GetAuthGameMode<ABlasterGameMode>();
+	BlasterGameMode = BlasterGameMode == nullptr ? GetWorld()->GetAuthGameMode<ABlasterGameMode>() : BlasterGameMode;
 	if (BlasterGameMode && BlasterPlayerState)
 	{
 		BlasterGameMode->PlayerLeftGame(BlasterPlayerState);
@@ -616,7 +620,7 @@ void ABlasterCharacter::MulticastElim_Implementation(bool bPlayerLeftGame)
 
 void ABlasterCharacter::ElimTimerFinished()
 {
-	ABlasterGameMode* BlasterGameMode = GetWorld()->GetAuthGameMode<ABlasterGameMode>();
+	BlasterGameMode = BlasterGameMode == nullptr ? GetWorld()->GetAuthGameMode<ABlasterGameMode>() : BlasterGameMode;
 	if (BlasterGameMode && !bLeftGame)
 	{
 		BlasterGameMode->RequestSpawn(this, GetController());
@@ -710,8 +714,10 @@ void ABlasterCharacter::OnRep_ReplicatedMovement()
 void ABlasterCharacter::ReceiveDamage(AActor* DamageActor, float Damage, const UDamageType* DamageType,
                                       class AController* InstigatorController, AActor* DamageCauser)
 {
+	BlasterGameMode = BlasterGameMode == nullptr ? GetWorld()->GetAuthGameMode<ABlasterGameMode>() : BlasterGameMode;
+	if (bElimmed || !IsValid(BlasterGameMode)) return; // 防止多次进行淘汰而进行多次积分
 
-	if (bElimmed) return; // 防止多次进行淘汰而进行多次积分
+	Damage = BlasterGameMode->CalculateDamage(InstigatorController, Controller, Damage);
 	
 	float DamageToHealth = Damage;
 	if (Shield > 0.f)
@@ -739,11 +745,11 @@ void ABlasterCharacter::ReceiveDamage(AActor* DamageActor, float Damage, const U
 
 	if (Health == 0.f)
 	{
-		if (ABlasterGameMode* GameMode = GetWorld()->GetAuthGameMode<ABlasterGameMode>())
+		if (BlasterGameMode)
 		{
 			BlasterPlayerController = BlasterPlayerController == nullptr ? Cast<ABlasterPlayerController>(GetController()) : BlasterPlayerController;
 			ABlasterPlayerController* AttackerController = Cast<ABlasterPlayerController>(InstigatorController);
-			GameMode->PlayerEliminated(this, BlasterPlayerController, AttackerController);
+			BlasterGameMode->PlayerEliminated(this, BlasterPlayerController, AttackerController);
 		}
 	}
 }
@@ -781,6 +787,15 @@ void ABlasterCharacter::UpdateTeamOutline()
 			GetMesh()->MarkRenderStateDirty();
 			return;
 		}
+		
+		ETeam MyTeam = LocalPlayerState->GetTeam();
+		ETeam TheirTeam = BlasterPlayerState->GetTeam();
+		
+		if (TheirTeam == ETeam::ET_NoTeam || MyTeam == ETeam::ET_NoTeam)
+		{
+			return;
+		}
+		
 		if (BlasterPlayerState->GetTeam() == LocalPlayerState->GetTeam())
 		{
 			GetMesh()->SetRenderCustomDepth(true);
@@ -822,7 +837,7 @@ void ABlasterCharacter::RemoveOverlappingWeapon(AWeapon* Weapon)
 
 void ABlasterCharacter::SpawnDefaultWeapon()
 {
-	ABlasterGameMode* BlasterGameMode = Cast<ABlasterGameMode>(UGameplayStatics::GetGameMode(this));
+	BlasterGameMode = BlasterGameMode == nullptr ? GetWorld()->GetAuthGameMode<ABlasterGameMode>() : BlasterGameMode;
 	UWorld* World = GetWorld();
 	if (BlasterGameMode && World && !IsElimmed() && DefaultWeapon)
 	{
