@@ -232,6 +232,13 @@ void ABlasterCharacter::BeginPlay()
 	ShowAttachedGrenade(false);
 }
 
+void ABlasterCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+	
+	UpdateTeamOutline();
+}
+
 void ABlasterCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -561,6 +568,7 @@ void ABlasterCharacter::MulticastElim_Implementation(bool bPlayerLeftGame)
 	// Disable Collision
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	AttachedGrenade->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	// Spawn Elim Bot
 	if (ElimBotEffect)
@@ -684,6 +692,8 @@ void ABlasterCharacter::OnRep_PlayerState()
 	Super::OnRep_PlayerState();
 	UpdateHUDScore();
 	UpdateHUDDefeats();
+	
+	UpdateTeamOutline();
 }
 
 // Only moved, the function would be called
@@ -751,6 +761,39 @@ void ABlasterCharacter::StartDissolve()
 	{
 		DissolveTimeline->AddInterpFloat(DissolveCurve, DissolveTrack);
 		DissolveTimeline->Play();
+	}
+}
+
+void ABlasterCharacter::UpdateTeamOutline()
+{
+	BlasterPlayerState = BlasterPlayerState == nullptr ? GetPlayerState<ABlasterPlayerState>() : BlasterPlayerState;
+	ABlasterPlayerController* LocalPlayerController = Cast<ABlasterPlayerController>(GetWorld()->GetFirstPlayerController());
+	if (!LocalPlayerController) return;
+	
+	ABlasterPlayerState* LocalPlayerState = LocalPlayerController->GetPlayerState<ABlasterPlayerState>();
+	
+	if (BlasterPlayerState && LocalPlayerState)
+	{
+		if (IsLocallyControlled())
+		{
+			GetMesh()->SetRenderCustomDepth(true);
+			GetMesh()->SetCustomDepthStencilValue(0);
+			GetMesh()->MarkRenderStateDirty();
+			return;
+		}
+		if (BlasterPlayerState->GetTeam() == LocalPlayerState->GetTeam())
+		{
+			GetMesh()->SetRenderCustomDepth(true);
+			GetMesh()->SetCustomDepthStencilValue(CUSTOM_TAN_OUTLINE);
+			GetMesh()->MarkRenderStateDirty();
+			return;
+		}
+		else
+		{
+			GetMesh()->SetRenderCustomDepth(true);
+			GetMesh()->SetCustomDepthStencilValue(CUSTOM_DEPTH_RED);
+			GetMesh()->MarkRenderStateDirty();
+		}
 	}
 }
 
@@ -1029,6 +1072,10 @@ void ABlasterCharacter::SetCharacterVisibility(bool bVisibility)
 	if (Combat && Combat->EquippedWeapon && Combat->EquippedWeapon->GetWeaponMesh())
 	{
 		Combat->EquippedWeapon->GetWeaponMesh()->bOwnerNoSee = !bVisibility;
+	}
+	if (Combat && Combat->SecondaryWeapon && Combat->SecondaryWeapon->GetWeaponMesh())
+	{
+		Combat->SecondaryWeapon->GetWeaponMesh()->bOwnerNoSee = !bVisibility;
 	}
 }
 

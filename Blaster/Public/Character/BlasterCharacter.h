@@ -21,6 +21,8 @@ class UBlasterAnimInstance;
 class USoundCue;
 class ULagCompensationComponent;
 
+#define CUSTOM_TAN_OUTLINE 254
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLeftGame);
 
 UCLASS()
@@ -37,6 +39,8 @@ public:
 	virtual void PostInitializeComponents() override;
 	virtual void Destroyed() override;
 	virtual void BeginPlay() override;
+	
+	virtual void PossessedBy(AController* NewController) override;
 
 	virtual void Jump() override;
 	virtual void StopJumping() override;
@@ -178,6 +182,11 @@ public:
 	void DropOrDestroyWeapon(AWeapon* Weapon);
 	void DropOrDestroyWeapons();
 
+	/**
+	 * Team
+	 */
+	void UpdateTeamOutline();
+
 private:
 	
 	UFUNCTION(Server, Reliable)
@@ -210,6 +219,7 @@ private:
 	void UpdateDissolveMaterial(float DissolveValue);
 	
 	void StartDissolve();
+	
 	
 public:
 		
@@ -463,4 +473,5 @@ private:
 	 */
 	UPROPERTY(EditAnywhere, Category = "Combat|Default Weapon")
 	TSubclassOf<AWeapon> DefaultWeapon;
+	
 };

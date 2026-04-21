@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerState.h"
+#include "BlasterType/Team.h"
 #include "BlasterPlayerState.generated.h"
 
 /**
@@ -22,11 +23,17 @@ public:
 	UFUNCTION()
 	void OnRep_Defeats();
 	
+	UFUNCTION()
+	void OnRep_Team();
+	
 	void AddToScore(float ScoreAmount);
 	void AddToDefeats(int32 DefeatsAmount);
-
+	
 	FORCEINLINE int32 GetDefeats() const {return Defeats;}
 	FORCEINLINE void SetDefeats(int32 Defeat) {Defeats = Defeat;}
+	
+	FORCEINLINE ETeam GetTeam() const {return Team;}
+	void SetTeam(ETeam TeamToSet);
 
 private:
 	UPROPERTY() // 及时垃圾回收
@@ -36,4 +43,7 @@ private:
 
 	UPROPERTY(ReplicatedUsing = OnRep_Defeats)
 	int32 Defeats;
+	
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_Team)
+	ETeam Team = ETeam::ET_NoTeam;
 };
