@@ -44,7 +44,8 @@ void AProjectileBullet::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, 
 		{
 			if (OwnerCharacter->HasAuthority() && !bUseServerSideRewind)
 			{
-				UGameplayStatics::ApplyDamage(OtherActor, Damage, OwnerController, this, UDamageType::StaticClass());
+				bool bHeadShot = HitResult.BoneName.ToString() == FString("head"); 
+				UGameplayStatics::ApplyDamage(OtherActor, bHeadShot ? HeadDamage : Damage, OwnerController, this, UDamageType::StaticClass());
 				Super::OnHit(HitComp, OtherActor, OtherComp, NormalImpulse, HitResult);
 				return;
 			}

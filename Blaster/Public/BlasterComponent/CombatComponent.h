@@ -23,11 +23,12 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
-protected:
 	virtual void BeginPlay() override;
 
 public:
 
+	friend class ABlasterCharacter;
+	
 	void EquipWeapon(class AWeapon* WeaponToEquip);
 	void SwapWeapon();
 	bool ShouldSwapWeapons();

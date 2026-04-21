@@ -80,8 +80,34 @@ void ABlasterGameMode::PlayerEliminated(class ABlasterCharacter* ElimmedCharacte
 
 	if (AttackerPlayerState && AttackerPlayerState != VictimPlayerState)
 	{
+		TArray<ABlasterPlayerState*> PlayersCurrentlyInTheLead;
+		for (const auto& LeadPlayer : BlasterGameState->TopScoringPlayers)
+		{
+			PlayersCurrentlyInTheLead.Add(LeadPlayer);
+		}
+		
 		AttackerPlayerState->AddToScore(1.f);
 		BlasterGameState->UpdateTopScore(AttackerPlayerState);
+		if (BlasterGameState->TopScoringPlayers.Contains(AttackerPlayerState))
+		{
+			ABlasterCharacter* Leader = Cast<ABlasterCharacter>(AttackerPlayerState->GetPawn());
+			if (Leader)
+			{
+				Leader->MulticastGainedTheLead();
+			}
+		}
+		
+		for (int32 i = 0; i < PlayersCurrentlyInTheLead.Num(); ++i)
+		{
+			if (!BlasterGameState->TopScoringPlayers.Contains(PlayersCurrentlyInTheLead[i]))
+			{
+				ABlasterCharacter* Loser = Cast<ABlasterCharacter>(PlayersCurrentlyInTheLead[i]->GetPawn());
+				if (Loser)
+				{
+					Loser->MulticastLostTheLead();
+				}
+			}
+		}
 	}
 
 	if (VictimPlayerState)
@@ -92,6 +118,15 @@ void ABlasterGameMode::PlayerEliminated(class ABlasterCharacter* ElimmedCharacte
 	if (ElimmedCharacter)
 	{
 		ElimmedCharacter->Elim(false); // Elim() will be called on the server
+	}
+	
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		ABlasterPlayerController* BlasterPlayerController = Cast<ABlasterPlayerController>(*It);
+		if (BlasterPlayerController && AttackerPlayerState && VictimPlayerState)
+		{
+			BlasterPlayerController->BroadcastElim(AttackerPlayerState, VictimPlayerState);
+		}
 	}
 }
 

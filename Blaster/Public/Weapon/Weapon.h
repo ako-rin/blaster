@@ -76,6 +76,7 @@ public:
 	FORCEINLINE EFireType GetFireType() const {return FireType;}
 	
 	FORCEINLINE float GetDamage() const {return Damage;}
+	FORCEINLINE float GetHeadShotDamage() const {return HeadDamage;}
 	
 	
 	virtual void Fire(const FVector& HitTarget);
@@ -168,6 +169,9 @@ protected:
 	
 	UPROPERTY(EditAnywhere, Category = "Weapon Properties")
 	float Damage = 20.f;
+	
+	UPROPERTY(EditAnywhere, Category = "Weapon Properties")
+	float HeadDamage = 20.f;
 	
 	UPROPERTY(Replicated, EditAnywhere, Category = "Weapon Properties|Server Rewind")
 	bool bUseServerSideRewind = false;

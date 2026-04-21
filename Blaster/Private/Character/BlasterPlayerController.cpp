@@ -158,6 +158,43 @@ void ABlasterPlayerController::ShowReturnToMainMenu()
 	}
  }
 
+void ABlasterPlayerController::BroadcastElim(APlayerState* Attacker, APlayerState* Victim)
+{
+	ClientElimAnnouncement(Attacker, Victim);
+}
+
+void ABlasterPlayerController::ClientElimAnnouncement_Implementation(APlayerState* Attacker, APlayerState* Victim)
+{
+	APlayerState* Self = GetPlayerState<APlayerState>();
+	if (Attacker && Victim && Self)
+	{
+		BlasterHUD = GetSafeHUD();
+		if (BlasterHUD)
+		{
+			if (Attacker == Self && Victim != Self)
+			{
+				BlasterHUD->AddElimAnnouncement("You", Victim->GetPlayerName());
+			}
+			else if (Victim == Self && Attacker != Self)
+			{
+				BlasterHUD->AddElimAnnouncement(Attacker->GetPlayerName(), "you");
+			}
+			else if (Attacker == Victim && Attacker == Self)
+			{
+				BlasterHUD->AddElimAnnouncement("You", "yourself");
+			}
+			else if (Attacker == Victim && Attacker != Self)
+			{
+				BlasterHUD->AddElimAnnouncement(Attacker->GetPlayerName(), "themselves");
+			}
+			else
+			{
+				BlasterHUD->AddElimAnnouncement(Attacker->GetPlayerName(), Victim->GetPlayerName());
+			}
+		}
+	}
+}
+
 void ABlasterPlayerController::OnRep_Pawn()
 {
 	Super::OnRep_Pawn();

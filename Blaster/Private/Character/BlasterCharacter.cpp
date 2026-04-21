@@ -6,6 +6,7 @@
 #include "Camera/CameraComponent.h"
 #include "EnhancedInputComponent.h"
 #include "InputActionValue.h"
+#include "NiagaraComponent.h"
 #include "BlasterComponent/CombatComponent.h"
 #include "BlasterComponent/BuffComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -23,6 +24,9 @@
 #include "Character/BlasterPlayerState.h"
 #include "Components/BoxComponent.h"
 #include "BlasterComponent/LagCompensationComponent.h"
+#include "NiagaraSystem.h"
+#include "NiagaraFunctionLibrary.h"
+#include "GameState/BlasterGameState.h"
 
 #define INDEX_DISSOLVE 0
 #define INITIALIZE_DISSOLVE -0.55f
@@ -237,7 +241,7 @@ void ABlasterCharacter::Tick(float DeltaTime)
 	HideCameraIfCharacterClose();
 	
 	// 实时更新 HUD，但是没必要
-	// PollInit();
+	PollInit();
 
 	/**
 	 * TODO:
@@ -489,6 +493,35 @@ void ABlasterCharacter::Elim(bool bPlayerLeftGame)
 	MulticastElim(bPlayerLeftGame);
 }
 
+void ABlasterCharacter::MulticastGainedTheLead_Implementation()
+{
+	if (CrownSystem == nullptr) return;
+	if (CrownComponent == nullptr)
+	{
+		CrownComponent = UNiagaraFunctionLibrary::SpawnSystemAttached(
+			CrownSystem, 
+			GetCapsuleComponent(),
+			FName(),
+			GetActorLocation() + FVector(0.f, 0.f, CrownOffsetZ),
+			GetActorRotation(),
+			EAttachLocation::KeepWorldPosition,
+			false
+		);
+	}
+	if (CrownComponent)
+	{
+		CrownComponent->Activate();
+	}
+}
+
+void ABlasterCharacter::MulticastLostTheLead_Implementation()
+{
+	if (CrownComponent)
+	{
+		CrownComponent->DestroyComponent();
+	}
+}
+
 void ABlasterCharacter::MulticastElim_Implementation(bool bPlayerLeftGame)
 {
 	bLeftGame = bPlayerLeftGame;
@@ -505,6 +538,12 @@ void ABlasterCharacter::MulticastElim_Implementation(bool bPlayerLeftGame)
 		AnimInstance->PlayElimMontage();
 	}
 
+	if (Combat)
+	{
+		Combat->bFiring = false;
+		GetWorldTimerManager().ClearTimer(Combat->FireTimer);
+	}
+	
 	// Start Dissolve
 	StartDissolve();
 	
@@ -552,7 +591,19 @@ void ABlasterCharacter::MulticastElim_Implementation(bool bPlayerLeftGame)
 	{
 		ShowSniperScopeWidget(false);
 	}
-	GetWorldTimerManager().SetTimer(ElimTimer, this, &ThisClass::ElimTimerFinished, ElimDelay);
+	
+	if (CrownComponent)
+	{
+		CrownComponent->DestroyComponent();
+	}
+	
+	GetWorldTimerManager().SetTimer(
+		ElimTimer, 
+		this, 
+		&ThisClass::ElimTimerFinished, 
+		ElimDelay
+	);
+	
 }
 
 void ABlasterCharacter::ElimTimerFinished()
@@ -1118,6 +1169,13 @@ void ABlasterCharacter::PollInit()
 		{
 			BlasterPlayerState->AddToScore(0.f);
 			BlasterPlayerState->AddToDefeats(0);
+			
+			// 避免领先时背淘汰后，领先特效不显示
+			ABlasterGameState* BlasterGameState =  Cast<ABlasterGameState>(UGameplayStatics::GetGameState(this));
+			if (BlasterGameState && BlasterGameState->TopScoringPlayers.Contains(BlasterPlayerState))
+			{
+				MulticastGainedTheLead();
+			}
 		}
 	}	
 }

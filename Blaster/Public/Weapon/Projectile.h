@@ -52,6 +52,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Projectile Properties|Damage")
 	float Damage = 20.f;
 	
+	UPROPERTY(EditAnywhere, Category = "Projectile Properties|Damage")
+	float HeadDamage = 20.f;
+	
 protected:
 
 	UPROPERTY(VisibleAnywhere)

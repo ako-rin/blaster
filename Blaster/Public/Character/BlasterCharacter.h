@@ -84,6 +84,12 @@ public:
 
 	void Elim(bool bPlayerLeftGame);
 	
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastGainedTheLead();
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastLostTheLead();
+	
 	void SetOverlappingWeapon(AWeapon* Weapon);
 	
 	bool IsWeaponEquipped();
@@ -421,6 +427,15 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Combat|Elim")
 	USoundCue* ElimBotSound;
+	
+	UPROPERTY(EditAnywhere, Category = "Combat|Crown")
+	class UNiagaraSystem* CrownSystem;
+	
+	UPROPERTY(EditAnywhere, Category = "Combat|Crown")
+	float CrownOffsetZ = 20.f;
+	
+	UPROPERTY()
+	class UNiagaraComponent* CrownComponent;
 
 	UPROPERTY()
 	class ABlasterPlayerState* BlasterPlayerState;

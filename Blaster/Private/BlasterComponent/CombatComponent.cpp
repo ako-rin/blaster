@@ -83,6 +83,12 @@ void UCombatComponent::DropEquippedWeapon()
 	{
 		// 如果已经装备了武器，就丢掉当前地武器
 		EquippedWeapon->Dropped();
+		EquippedWeapon = nullptr;
+	}
+	if (SecondaryWeapon)
+	{
+		SecondaryWeapon->Dropped();
+		SecondaryWeapon = nullptr;
 	}
 }
 
@@ -486,6 +492,7 @@ void UCombatComponent::ShotgunLocalFire(bool bIsFiring, const TArray<FVector_Net
 	
 	if (CombatState == ECombatState::ECS_Reloading || CombatState == ECombatState::ECS_Unoccupied)
 	{
+		bLocallyReloading = false;
 		if (UBlasterAnimInstance* AnimInstance = Character->GetAnimInstance())
 		{
 			AnimInstance->PlayFireMontage();

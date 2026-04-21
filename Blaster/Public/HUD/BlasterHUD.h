@@ -46,11 +46,16 @@ public:
 	void AddCharacterOverlay(); // 将用户控件添加至 HUD 上
 	void AddAnnouncement();
 	
+	void AddElimAnnouncement(FString AttackerName, FString VictimName);
 
 private:
 
 	void DrawCrosshair(UTexture2D* Texture, FVector2D ViewportCenter, FVector2D Spread, FLinearColor CrosshairColor);
 	void DrawCrosshair(UTexture2D* Texture, FVector2D ViewportCenter, FLinearColor CrosshairColor);
+	
+	UFUNCTION()
+	void ElimAnnouncementTimerFinished(class UElimAnnouncement* MsgToRemove);
+
 
 private:
 
@@ -58,6 +63,12 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	float CrossshairSpreadMax = 16.f;
+	
+	UPROPERTY(EditAnywhere)
+	float ElimAnnouncementTime = 2.5f;
+	
+	UPROPERTY()
+	TArray<UElimAnnouncement*> ElimMessages;
 	
 	UPROPERTY(EditAnywhere, Category = "Player Stats")
 	TSubclassOf<class UUserWidget> CharacterOverlayClass;
@@ -70,5 +81,11 @@ private:
 
 	UPROPERTY()
 	UAnnouncement* Announcement; // point to blueprint
+	
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<class UElimAnnouncement> ElimAnnouncementClass;
+	
+	UPROPERTY()
+	APlayerController* OwningPlayer;
 	
 };

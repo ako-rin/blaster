@@ -32,6 +32,10 @@ protected:
 
 public:
 	void ShowReturnToMainMenu();
+	void BroadcastElim(APlayerState* Attacker, APlayerState* Victim);
+	
+	UFUNCTION(Client, Reliable)
+	void ClientElimAnnouncement(APlayerState* Attacker, APlayerState* Victim);
 	
 	void SetHUDHealth(float Health, float MaxHealth);
 	void SetHUDShield(float Shield, float MaxShield);

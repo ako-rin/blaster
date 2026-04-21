@@ -92,6 +92,7 @@ void AShotgun::FireShotgun(const TArray<FVector_NetQuantize>& HitTargets)
 
 		// Maps hit character to number of times hit
 		TMap<ABlasterCharacter*, uint32> HitMap;
+		TMap<ABlasterCharacter*, uint32> HeadShotHitMap;
 		for (const FVector_NetQuantize& HitTarget : HitTargets)
 		{
 			FHitResult FireHit;
@@ -99,13 +100,29 @@ void AShotgun::FireShotgun(const TArray<FVector_NetQuantize>& HitTargets)
 
 			if (ABlasterCharacter* BlasterCharacter = Cast<ABlasterCharacter>(FireHit.GetActor()))
 			{
-				if (HitMap.Contains(BlasterCharacter))
+				bool bHeadShot = FireHit.BoneName.ToString() == FString("head");
+				
+				if (bHeadShot)
 				{
-					HitMap[BlasterCharacter]++;
+					if (HitMap.Contains(BlasterCharacter))
+					{
+						HeadShotHitMap[BlasterCharacter]++;
+					}
+					else
+					{
+						HeadShotHitMap.Emplace(BlasterCharacter, 1);
+					}
 				}
 				else
 				{
-					HitMap.Emplace(BlasterCharacter, 1);
+					if (HitMap.Contains(BlasterCharacter))
+					{
+						HitMap[BlasterCharacter]++;
+					}
+					else
+					{
+						HitMap.Emplace(BlasterCharacter, 1);
+					}
 				}
 				if (HitSound)
 				{
@@ -129,24 +146,54 @@ void AShotgun::FireShotgun(const TArray<FVector_NetQuantize>& HitTargets)
 			}
 		}
 		TArray<ABlasterCharacter*> HitCharacters;
+		
+		// Maps Character hit to total damage
+		TMap<ABlasterCharacter*, float> DamageMap;
+		
+		// body damage
 		for (auto HitPair : HitMap)
 		{
 			if (HitPair.Key && GetInstigatorController())
 			{
-				bool bCauseAuthDamage = !bUseServerSideRewind || GetInstigator()->IsLocallyControlled();
-				if (HasAuthority() && bCauseAuthDamage)
-				{
-					UGameplayStatics::ApplyDamage(
-						HitPair.Key, // Character that was hit
-						Damage * HitPair.Value, // Multiply Damage by number of times hit
-						GetInstigatorController(),
-						this,
-						UDamageType::StaticClass()
-					);
-				}
+				DamageMap.Emplace(HitPair.Key, HitPair.Value * Damage);
+					
+				HitCharacters.AddUnique(HitPair.Key);
 			}
-			HitCharacters.Add(HitPair.Key);
 		}
+		
+		// headshot damage
+		for (auto HeadShotHitPair : HeadShotHitMap)
+		{
+			if (HeadShotHitPair.Key && GetInstigatorController())
+			{
+				if (DamageMap.Contains(HeadShotHitPair.Key))
+				{
+					DamageMap[HeadShotHitPair.Key] += HeadShotHitPair.Value * HeadDamage;
+				}
+				else
+				{
+					DamageMap.Emplace(HeadShotHitPair.Key, HeadShotHitPair.Value * HeadDamage);
+				}
+				HitCharacters.AddUnique(HeadShotHitPair.Key);
+			}
+		}
+		
+		// apply damage
+		for (const auto& HitPair : DamageMap)
+		{
+			bool bCauseAuthDamage = !bUseServerSideRewind || GetInstigator()->IsLocallyControlled();
+			if (HasAuthority() && bCauseAuthDamage)
+			{
+				UGameplayStatics::ApplyDamage(
+					HitPair.Key, // Character that was hit
+					HitPair.Value, // Damage calculated by two loops
+					GetInstigatorController(),
+					this,
+					UDamageType::StaticClass()
+				);
+			}
+		}
+		
 		if (!HasAuthority() && bUseServerSideRewind)
 		{
 			BlasterOwnerCharacter = BlasterOwnerCharacter == nullptr ? Cast<ABlasterCharacter>(GetInstigator()) : BlasterOwnerCharacter;
