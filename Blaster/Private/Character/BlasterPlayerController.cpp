@@ -20,6 +20,7 @@
 #include "GameState/BlasterGameState.h"
 #include "HUD/ReturnToMainMenu.h"
 #include "Weapon/Weapon.h"
+#include "BlasterType/Announcement.h"
 
 void ABlasterPlayerController::BeginPlay()
 {
@@ -570,7 +571,7 @@ void ABlasterPlayerController::CheckPing(float DeltaTime)
 		PlayerState = PlayerState == nullptr ? TObjectPtr<APlayerState>(GetPlayerState<APlayerState>()) : PlayerState;
 		if (PlayerState)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Ping :%d"), (PlayerState->GetCompressedPing() << 2))
+			// UE_LOG(LogTemp, Warning, TEXT("Ping :%d"), (PlayerState->GetCompressedPing() << 2))
 			if ((PlayerState->GetCompressedPing() << 2) > HighPingThreshold)
 			{
 				HighPingWarning();
@@ -654,28 +655,6 @@ void ABlasterPlayerController::RemoveDefaultActions()
 	}
 }
 
-void ABlasterPlayerController::AddDefaultActions()
-{
-	if (!IsLocalController()) return;
-
-	InputSubsystem = InputSubsystem == nullptr
-		                 ? ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer())
-		                 : InputSubsystem;
-	if (InputSubsystem)
-	{
-		InputSubsystem->ClearAllMappings();
-
-		if (DefaultMappingContexts)
-		{
-			InputSubsystem->AddMappingContext(DefaultMappingContexts, 0);
-		}
-		if (MouseLookMappingContexts)
-		{
-			InputSubsystem->AddMappingContext(MouseLookMappingContexts, 1);
-		}
-	}
-}
-
 // begin play
 void ABlasterPlayerController::ServerCheckMatchState_Implementation()
 {
@@ -706,6 +685,11 @@ void ABlasterPlayerController::ClientJoinMidgame_Implementation(FName StateOfMat
 // GameMode also call the function
 void ABlasterPlayerController::OnMatchStateSet(FName State, bool bTeamsMatch)
 {
+	if (HasAuthority())
+	{
+		bShowTeamScores = bTeamsMatch;
+	}
+	
 	MatchState = State;
 
 	if (HasAuthority() && MatchState == MatchState::WaitingToStart)
@@ -729,7 +713,7 @@ void ABlasterPlayerController::OnMatchStateSet(FName State, bool bTeamsMatch)
 	}
 	else if (MatchState == MatchState::InProgress)
 	{
-		HandleMatchHasStarted(bTeamsMatch);
+		HandleMatchHasStarted();
 	}
 	else if (MatchState == MatchState::Cooldown)
 	{
@@ -738,13 +722,13 @@ void ABlasterPlayerController::OnMatchStateSet(FName State, bool bTeamsMatch)
 }
 
 
-void ABlasterPlayerController::HandleMatchHasStarted(bool bTeamsMatch)
+void ABlasterPlayerController::HandleMatchHasStarted()
 {
 	// BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
-	if (HasAuthority())
-	{
-		bShowTeamScores = bTeamsMatch;
-	}
+	// if (HasAuthority())
+	// {
+	// 	bShowTeamScores = bTeamsMatch;
+	// }
 	
 	BlasterHUD = GetSafeHUD();
 	if (BlasterHUD)
@@ -760,12 +744,12 @@ void ABlasterPlayerController::HandleMatchHasStarted(bool bTeamsMatch)
 			BlasterHUD->GetAnnouncement()->SetVisibility(ESlateVisibility::Hidden);
 		}
 
-		if (!HasAuthority())
-		{
-			return;
-		}
-		
-		if (bTeamsMatch)
+		// if (!HasAuthority())
+		// {
+		// 	return;
+		// }
+		//
+		if (bShowTeamScores)
 		{
 			InitTeamScores();
 		}
@@ -814,8 +798,7 @@ void ABlasterPlayerController::HandleCooldown()
 		if (bHUDValid)
 		{
 			BlasterHUD->GetAnnouncement()->SetVisibility(ESlateVisibility::Visible);
-			FString AnnouncementText("New Match Start In:");
-			BlasterHUD->GetAnnouncement()->AnnouncementText->SetText(FText::FromString(AnnouncementText));
+			BlasterHUD->GetAnnouncement()->AnnouncementText->SetText(FText::FromString(Announcement::NewMatchStartIn));
 
 			ABlasterPlayerState* BlasterPlayerState = GetPlayerState<ABlasterPlayerState>();
 			if (BlasterPlayerState)
@@ -823,29 +806,8 @@ void ABlasterPlayerController::HandleCooldown()
 				if (ABlasterGameState* BlasterGameState = Cast<ABlasterGameState>(UGameplayStatics::GetGameState(this)))
 				{
 					TArray<ABlasterPlayerState*> TopPlayers = BlasterGameState->TopScoringPlayers;
-					FString InfoTextString;
-					if (TopPlayers.Num() == 0)
-					{
-						InfoTextString = FString("There is no winner.");
-					}
-					else if (TopPlayers.Num() == 1 && TopPlayers[0] == BlasterPlayerState)
-					{
-						// This controller of character is winner
-						InfoTextString = FString("You are the winner!");
-					}
-					else if (TopPlayers.Num() == 1) // other
-					{
-						// This controller of character is not winner
-						InfoTextString = FString::Printf(TEXT("Winner: \n%s"), *TopPlayers[0]->GetPlayerName());
-					}
-					else if (TopPlayers.Num() > 1) // local
-					{
-						InfoTextString = FString("Players tied for the win!\n");
-						for (const auto& TiedPlayer : TopPlayers)
-						{
-							InfoTextString.Append(FString::Printf(TEXT("%s\n"), *TiedPlayer->GetPlayerName()));
-						}
-					}
+					FString InfoTextString = bShowTeamScores ? GetTeamsInfoText(BlasterGameState) : GetInfoText(TopPlayers);
+					
 					BlasterHUD->GetAnnouncement()->InfoText->SetText(FText::FromString(InfoTextString));
 				}
 			}
@@ -855,6 +817,136 @@ void ABlasterPlayerController::HandleCooldown()
 	if (ABlasterCharacter* BlasterCharacter = Cast<ABlasterCharacter>(GetPawn()))
 	{
 		BlasterCharacter->SetDisableCharacterGameplay(true);
+	}
+}
+
+FString ABlasterPlayerController::GetInfoText(const TArray<class ABlasterPlayerState*>& PlayerStates)
+{
+	ABlasterPlayerState* BlasterPlayerState = GetPlayerState<ABlasterPlayerState>();
+	if (BlasterPlayerState == nullptr)
+	{
+		return FString();	
+	}
+	
+	FString InfoTextString;
+	if (PlayerStates.Num() == 0)
+	{
+		InfoTextString = Announcement::ThereIsNoWinner;
+	}
+	else if (PlayerStates.Num() == 1 && PlayerStates[0] == BlasterPlayerState)
+	{
+		// This controller of character is winner
+		InfoTextString = Announcement::YouAreTheWinner;
+	}
+	else if (PlayerStates.Num() == 1) // other
+	{
+		// This controller of character is not winner
+		InfoTextString = FString::Printf(TEXT("Winner: \n%s"), *PlayerStates[0]->GetPlayerName());
+	}
+	else if (PlayerStates.Num() > 1) // local
+	{
+		InfoTextString = FString::Printf(TEXT("%s\n"), *Announcement::PlayerTiedForTheWin); 
+		for (const auto& TiedPlayer : PlayerStates)
+		{
+			InfoTextString.Append(FString::Printf(TEXT("%s\n"), *TiedPlayer->GetPlayerName()));
+		}
+	}
+	return InfoTextString;
+}
+
+FString ABlasterPlayerController::GetTeamsInfoText(class ABlasterGameState* BlasterGameState)
+{
+	if (BlasterGameState == nullptr)
+	{
+		return FString();
+	}
+	
+	FString InfoTextString;
+	
+	const int32 RedTeamScore = BlasterGameState->RedTeamScore;
+	const int32 BlueTeamScore = BlasterGameState->BlueTeamScore;
+	
+	if (RedTeamScore == 0 && BlueTeamScore == 0)
+	{
+		InfoTextString = Announcement::ThereIsNoWinner;
+	}
+	else if (RedTeamScore == BlueTeamScore)
+	{
+		InfoTextString = FString::Printf(TEXT("%s\n"), *Announcement::TeamTiedForTheWin);
+		InfoTextString.Append(Announcement::RedTeam);
+		InfoTextString.Append(TEXT("\n"));
+		InfoTextString.Append(Announcement::BlueTeam);
+		InfoTextString.Append(TEXT("\n"));
+	}
+	else if (RedTeamScore > BlueTeamScore)
+	{
+		InfoTextString = FString::Printf(TEXT("%s\n"), *Announcement::RedTeamWins);
+		InfoTextString.Append(FString::Printf(TEXT("%s : %d\n"), *Announcement::RedTeam, RedTeamScore));
+		InfoTextString.Append(FString::Printf(TEXT("%s : %d"), *Announcement::BlueTeam, BlueTeamScore));
+	}
+	else
+	{
+		InfoTextString = FString::Printf(TEXT("%s\n"), *Announcement::RedTeamWins);
+		InfoTextString.Append(FString::Printf(TEXT("%s : %d\n"), *Announcement::BlueTeam, BlueTeamScore));
+		InfoTextString.Append(FString::Printf(TEXT("%s : %d"), *Announcement::RedTeam, RedTeamScore));
+	}
+	
+	return InfoTextString;
+}
+
+void ABlasterPlayerController::AddDefaultActions()
+{
+	if (!IsLocalController()) return;
+
+	InputSubsystem = InputSubsystem == nullptr
+						 ? ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer())
+						 : InputSubsystem;
+	if (InputSubsystem)
+	{
+		InputSubsystem->ClearAllMappings();
+
+		if (DefaultMappingContexts)
+		{
+			InputSubsystem->AddMappingContext(DefaultMappingContexts, 0);
+		}
+		if (MouseLookMappingContexts)
+		{
+			InputSubsystem->AddMappingContext(MouseLookMappingContexts, 1);
+		}
+	}
+}
+
+void ABlasterPlayerController::SetFlagInputState(bool bIsHoldingFlag)
+{
+	InputSubsystem = InputSubsystem == nullptr
+					 ? ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer())
+					 : InputSubsystem;
+	if (InputSubsystem)
+	{
+		if (bIsHoldingFlag)
+		{
+			if (DefaultMappingContexts)
+			{
+				InputSubsystem->RemoveMappingContext(DefaultMappingContexts);
+			}
+			
+			if (FlagCarryingMappingContext)
+			{
+				InputSubsystem->AddMappingContext(FlagCarryingMappingContext, 2);
+			}
+		}
+		else
+		{
+			if (FlagCarryingMappingContext)
+			{
+				InputSubsystem->RemoveMappingContext(FlagCarryingMappingContext);
+			}
+			
+			if (DefaultMappingContexts)
+			{
+				InputSubsystem->AddMappingContext(DefaultMappingContexts, 0);
+			}
+		}
 	}
 }
 

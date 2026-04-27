@@ -79,16 +79,26 @@ void AWeapon::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* 
 {
 	if (ABlasterCharacter* BlasterCharacter = Cast<ABlasterCharacter>(OtherActor))
 	{
+		if (WeaponType == EWeaponType::EWT_Flag && BlasterCharacter->GetTeam() == Team || BlasterCharacter->IsHoldingTheFlag())
+		{
+			return;
+		}
+		
 		// BlasterCharacter->SetOverlappingWeapon(this);
 		BlasterCharacter->AddOverlappingWeapon(this);
 	}
 }
 
+// Out of Range or Disable the Collision
 void AWeapon::OnSphereEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
 	if (ABlasterCharacter* BlasterCharacter = Cast<ABlasterCharacter>(OtherActor))
 	{
+		if (WeaponType == EWeaponType::EWT_Flag && BlasterCharacter->GetTeam() == Team || BlasterCharacter->IsHoldingTheFlag())
+		{
+			return;
+		}
 		BlasterCharacter->RemoveOverlappingWeapon(this);
 	}
 }
@@ -118,6 +128,7 @@ void AWeapon::Dropped()
 
 	FDetachmentTransformRules DetachRules(EDetachmentRule::KeepWorld, true);
 	WeaponMesh->DetachFromComponent(DetachRules); // 当服务端 Detach 这个 Weapon 后，会自动赋值给客户端来调用 DetachFromComponent
+	
 	SetOwner(nullptr); // call OnRep_Owner
 
 	BlasterOwnerCharacter = nullptr;
@@ -253,6 +264,9 @@ void AWeapon::OnWeaponStateSet()
 		break;
 	case EWeaponState::EWS_Dropped:
 		OnDropped();
+		break;
+		
+	case EWeaponState::EWS_Initial:
 		break;
 		
 	}

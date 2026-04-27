@@ -9,6 +9,7 @@
 #include "Interfaces/InteractWithCrosshairsInterface.h"
 #include "Components/TimelineComponent.h"
 #include "BlasterComponent/CombatState.h"
+#include "BlasterType/Team.h"
 #include "BlasterCharacter.generated.h"
 
 class UInputAction;
@@ -152,6 +153,11 @@ public:
 	
 	FORCEINLINE ULagCompensationComponent* GetLagCompensation() const {return LagCompensation;}
 	
+	FORCEINLINE ETeam GetTeam();
+	
+	FORCEINLINE bool IsHoldingTheFlag() const;
+	void SetHoldingTheFlag(bool bHolding);
+	
 	bool IsLocallyReloading() const;
 	bool IsLocallySwapWeapon() const;
 
@@ -176,6 +182,7 @@ public:
 	AWeapon* GetBestOverlappingWeapon();
 	void AddOverlappingWeapon(AWeapon* Weapon);
 	void RemoveOverlappingWeapon(AWeapon* Weapon);
+	void EmptyOverlappingWeapon();
 
 	/**
 	 *  Weapon
@@ -183,11 +190,16 @@ public:
 	void SpawnDefaultWeapon();
 	void DropOrDestroyWeapon(AWeapon* Weapon);
 	void DropOrDestroyWeapons();
+	
+	void SetSpawnPoint();
+	void OnPlayerStateInitialized();
 
 	/**
 	 * Team
 	 */
 	void UpdateTeamOutline();
+	
+	bool HasTeamFlag();
 
 private:
 	
@@ -478,5 +490,4 @@ private:
 	 */
 	UPROPERTY(EditAnywhere, Category = "Combat|Default Weapon")
 	TSubclassOf<AWeapon> DefaultWeapon;
-	
 };

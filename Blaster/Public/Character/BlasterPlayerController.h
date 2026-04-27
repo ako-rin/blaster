@@ -85,6 +85,11 @@ public:
 	
 	UFUNCTION(Server, Reliable)
 	void ServerReportPingStatus(bool bHighPing);
+	
+	FString GetInfoText(const TArray<class ABlasterPlayerState*>& PlayerStates);
+	FString GetTeamsInfoText(class ABlasterGameState* BlasterGameState);
+	
+	void SetFlagInputState(bool bIsHoldingFlag);
 
 protected:
 	/**
@@ -119,7 +124,7 @@ protected:
 
 private:
 
-	void HandleMatchHasStarted(bool bTeamsMatch = false);
+	void HandleMatchHasStarted();
 	void HandleCooldown();
 	
 	class ABlasterHUD* GetSafeHUD();
@@ -136,6 +141,10 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Input")
 	TObjectPtr<UInputMappingContext> DefaultMappingContexts;
+	
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputMappingContext> FlagCarryingMappingContext;
+	
 	UPROPERTY(EditAnywhere, Category = "Input")
 	TObjectPtr<UInputMappingContext> MouseLookMappingContexts;
 

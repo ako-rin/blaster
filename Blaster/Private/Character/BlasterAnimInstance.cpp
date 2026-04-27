@@ -58,6 +58,8 @@ void UBlasterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 	bElimmed = BlasterCharacter->IsElimmed();
 	
+	bHoldingTheFlag = BlasterCharacter->IsHoldingTheFlag();
+	
 	// Offset Yaw Strafing
 	FRotator AimRotation = BlasterCharacter->GetBaseAimRotation(); // World Axis
 	FRotator MovementRotation = UKismetMathLibrary::MakeRotFromX(BlasterCharacter->GetVelocity()); // Local Axis

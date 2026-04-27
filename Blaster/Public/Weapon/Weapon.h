@@ -5,10 +5,12 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Weapon/WeaponTypes.h"
+#include "BlasterType/Team.h"
 #include "Weapon.generated.h"
 
 class USphereComponent;
 class USoundCue;
+class UWidgetComponent;
 
 UENUM(BlueprintType)
 enum class EWeaponState : uint8
@@ -78,11 +80,15 @@ public:
 	FORCEINLINE float GetDamage() const {return Damage;}
 	FORCEINLINE float GetHeadShotDamage() const {return HeadDamage;}
 	
+	FORCEINLINE UWidgetComponent* GetPickupWidget() const {return PickupWidget;}
+	
+	FORCEINLINE ETeam GetTeam() const {return Team;}
+	
 	
 	virtual void Fire(const FVector& HitTarget);
 
 	// Drop the weapon
-	void Dropped();
+	virtual void Dropped();
 
 	/**
 	 * Emmo
@@ -245,4 +251,7 @@ private:
 	 */
 	UPROPERTY(EditAnywhere, Category = "Weapon Properties")
 	bool bDestroyWeapon = false;
+	
+	UPROPERTY(EditAnywhere, Category = "Weapon Properties")
+	ETeam Team = ETeam::ET_NoTeam;
 };

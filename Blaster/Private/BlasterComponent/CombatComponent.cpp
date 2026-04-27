@@ -75,6 +75,7 @@ void UCombatComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty
 	DOREPLIFETIME_CONDITION(UCombatComponent, bWalking, COND_SimulatedOnly);
 	DOREPLIFETIME(UCombatComponent, CombatState);
 	DOREPLIFETIME_CONDITION(UCombatComponent, CarriedAmmo, COND_OwnerOnly); // only for client
+	DOREPLIFETIME(UCombatComponent, bHoldingTheFlag);
 }
 
 void UCombatComponent::DropEquippedWeapon()
@@ -85,11 +86,11 @@ void UCombatComponent::DropEquippedWeapon()
 		EquippedWeapon->Dropped();
 		EquippedWeapon = nullptr;
 	}
-	if (SecondaryWeapon)
-	{
-		SecondaryWeapon->Dropped();
-		SecondaryWeapon = nullptr;
-	}
+	// if (SecondaryWeapon)
+	// {
+	// 	SecondaryWeapon->Dropped();
+	// 	SecondaryWeapon = nullptr;
+	// }
 }
 
 void UCombatComponent::AttachActorToRightHand(AActor* ActorToAttach)
@@ -105,10 +106,10 @@ void UCombatComponent::AttachActorToRightHand(AActor* ActorToAttach)
 void UCombatComponent::AttachActorToLeftHand(AActor* ActorToAttach)
 {
 	if (!Character || !Character->GetMesh() || !ActorToAttach) return;
-	const USkeletalMeshSocket* RightHandSocket = Character->GetMesh()->GetSocketByName(FName("LeftHandSocket"));
-	if (RightHandSocket)
+	const USkeletalMeshSocket* LeftHandSocket = Character->GetMesh()->GetSocketByName(FName("LeftHandSocket"));
+	if (LeftHandSocket)
 	{
-		RightHandSocket->AttachActor(ActorToAttach, Character->GetMesh());
+		LeftHandSocket->AttachActor(ActorToAttach, Character->GetMesh());
 	}
 }
 
@@ -119,6 +120,16 @@ void UCombatComponent::AttachActorToBackpack(AActor* ActorToAttach)
 	if (RightHandSocket)
 	{
 		RightHandSocket->AttachActor(ActorToAttach, Character->GetMesh());
+	}
+}
+
+void UCombatComponent::AttachFlagToLeftHand(AActor* Flag)
+{
+	if (!Character || !Character->GetMesh() || !Flag) return;
+	const USkeletalMeshSocket* LeftHandSocket = Character->GetMesh()->GetSocketByName(FName("FlagSocket"));
+	if (LeftHandSocket)
+	{
+		LeftHandSocket->AttachActor(Flag, Character->GetMesh());
 	}
 }
 
@@ -212,70 +223,29 @@ void UCombatComponent::EquipWeapon(class AWeapon* WeaponToEquip)
 {
 	if (!Character || !WeaponToEquip) return;
 	if (CombatState != ECombatState::ECS_Unoccupied) return;
-
-	if (EquippedWeapon && !SecondaryWeapon)
+	
+	if (WeaponToEquip->GetWeaponType() == EWeaponType::EWT_Flag)
 	{
-		EquipSecondaryWeapon(WeaponToEquip);
+		SetHoldingTheFlag(true);
+		WeaponToEquip->SetOwner(Character);
+		WeaponToEquip->SetWeaponState(EWeaponState::EWS_Equipped);
+		AttachFlagToLeftHand(WeaponToEquip);
 	}
 	else
 	{
-		EquipPrimaryWeapon(WeaponToEquip);
+		if (EquippedWeapon && !SecondaryWeapon)
+		{
+			EquipSecondaryWeapon(WeaponToEquip);
+		}
+		else
+		{
+			EquipPrimaryWeapon(WeaponToEquip);
 		
+		// Character Control
+		Character->GetCharacterMovement()->bOrientRotationToMovement = false;
+		Character->bUseControllerRotationYaw = true;
+		}
 	}
-	// Character Control
-	Character->GetCharacterMovement()->bOrientRotationToMovement = false;
-	Character->bUseControllerRotationYaw = true;
-}
-
-// On Server
-void UCombatComponent::SwapWeapon()
-{
-	if (CombatState != ECombatState::ECS_Unoccupied || Character == nullptr) return;
-	
-	if (UBlasterAnimInstance* AnimInstance = Character->GetAnimInstance())
-	{
-		AnimInstance->PlayEquipMontage();
-	}
-	CombatState = ECombatState::ECS_SwapWeapon;
-	SetLocallySwapWeapon(false);
-	if (SecondaryWeapon)
-	{
-		SecondaryWeapon->EnableCustomDepth(false);
-	}
-}
-
-void UCombatComponent::FinishAttachEquiping()
-{
-	if (Character == nullptr || !Character->HasAuthority()) return;
-	
-	AWeapon* TempWeapon = EquippedWeapon;
-	EquippedWeapon = SecondaryWeapon;
-	SecondaryWeapon = TempWeapon;
-	
-	EquippedWeapon->SetWeaponState(EWeaponState::EWS_Equipped);
-	AttachActorToRightHand(EquippedWeapon);
-	EquippedWeapon->SetHUDAmmo();
-	UpdateCarriedAmmo();
-	PlayEquippedWeaponSound(EquippedWeapon);
-	ReloadEmptyWeapon();
-
-	SecondaryWeapon->SetWeaponState(EWeaponState::EWS_EquippedSecondary);
-	AttachActorToBackpack(SecondaryWeapon);
-}
-
-void UCombatComponent::FinishEquiping()
-{
-	if (Character && Character->HasAuthority())
-	{
-		CombatState = ECombatState::ECS_Unoccupied;	
-	}
-	SetLocallySwapWeapon(true);
-	if (SecondaryWeapon) SecondaryWeapon->EnableCustomDepth(true);
-}
-
-bool UCombatComponent::ShouldSwapWeapons()
-{
-	return EquippedWeapon && SecondaryWeapon;
 }
 
 void UCombatComponent::EquipPrimaryWeapon(AWeapon* WeaponToEquip)
@@ -356,6 +326,82 @@ void UCombatComponent::OnRep_SecondaryWeapon()
 	}
 }
 
+// On Server
+void UCombatComponent::SwapWeapon()
+{
+	if (CombatState != ECombatState::ECS_Unoccupied || Character == nullptr) return;
+	
+	if (UBlasterAnimInstance* AnimInstance = Character->GetAnimInstance())
+	{
+		AnimInstance->PlayEquipMontage();
+	}
+	CombatState = ECombatState::ECS_SwapWeapon;
+	SetLocallySwapWeapon(false);
+	if (SecondaryWeapon)
+	{
+		SecondaryWeapon->EnableCustomDepth(false);
+	}
+}
+
+void UCombatComponent::FinishAttachEquiping()
+{
+	if (Character == nullptr || !Character->HasAuthority()) return;
+	
+	AWeapon* TempWeapon = EquippedWeapon;
+	EquippedWeapon = SecondaryWeapon;
+	SecondaryWeapon = TempWeapon;
+	
+	EquippedWeapon->SetWeaponState(EWeaponState::EWS_Equipped);
+	AttachActorToRightHand(EquippedWeapon);
+	EquippedWeapon->SetHUDAmmo();
+	UpdateCarriedAmmo();
+	PlayEquippedWeaponSound(EquippedWeapon);
+	ReloadEmptyWeapon();
+
+	SecondaryWeapon->SetWeaponState(EWeaponState::EWS_EquippedSecondary);
+	AttachActorToBackpack(SecondaryWeapon);
+}
+
+void UCombatComponent::SetHoldingTheFlag(const bool& bHolding)
+{
+	bHoldingTheFlag = bHolding;
+	
+	if (!Character) return;
+	
+	if (Character->IsLocallyControlled())
+	{
+		Controller = Controller == nullptr ? Cast<ABlasterPlayerController>(Character->GetController()) : Controller;
+		if (Controller)
+		{
+			// Change IMC
+			Controller->SetFlagInputState(bHoldingTheFlag);
+		}
+		if (bHolding)
+		{
+			Character->Crouch();
+		}
+		else
+		{
+			Character->UnCrouch();
+		}
+	}
+}
+
+void UCombatComponent::FinishEquiping()
+{
+	if (Character && Character->HasAuthority())
+	{
+		CombatState = ECombatState::ECS_Unoccupied;	
+	}
+	SetLocallySwapWeapon(true);
+	if (SecondaryWeapon) SecondaryWeapon->EnableCustomDepth(true);
+}
+
+bool UCombatComponent::ShouldSwapWeapons()
+{
+	return EquippedWeapon && SecondaryWeapon;
+}
+
 void UCombatComponent::OnRep_Aiming()
 {
 	if (!EquippedWeapon)
@@ -416,6 +462,29 @@ void UCombatComponent::OnRep_CombatState()
 		break;
 	case ECombatState::ECS_MAX:
 		break;
+	}
+}
+
+void UCombatComponent::OnRep_HoldingTheFlag()
+{
+	if (!Character) return;
+	
+	if (Character->IsLocallyControlled())
+	{
+		Controller = Controller == nullptr ? Cast<ABlasterPlayerController>(Character->GetController()) : Controller;
+		if (Controller)
+		{
+			Controller->SetFlagInputState(bHoldingTheFlag);
+		}
+		
+		if (bHoldingTheFlag)
+		{
+			Character->Crouch();
+		}
+		else
+		{
+			Character->UnCrouch();
+		}
 	}
 }
 

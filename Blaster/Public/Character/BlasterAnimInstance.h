@@ -122,6 +122,9 @@ protected:
 	bool bUseAimOffsets;
 
 	UPROPERTY(BlueprintReadOnly, Category = Movement)
+	bool bHoldingTheFlag;
+
+	UPROPERTY(BlueprintReadOnly, Category = Movement)
 	FTransform LeftHandTransform;
 
 	UPROPERTY(BlueprintReadOnly, Category = Movement)

@@ -52,6 +52,9 @@ public:
 
 	UFUNCTION()
 	void OnRep_CombatState();
+	
+	UFUNCTION()
+	void OnRep_HoldingTheFlag();
 
 	FORCEINLINE bool IsAiming() const {return bAiming;}
 	FORCEINLINE bool IsWalking() const {return bWalking;}
@@ -67,6 +70,9 @@ public:
 	FORCEINLINE bool IsLocallyReloading() const {return bLocallyReloading;}
 	FORCEINLINE bool IsLocallySwapWeapon() const {return bFinishedSwapping;}
 	FORCEINLINE void SetLocallySwapWeapon(bool bSwapWeapon) {bFinishedSwapping = bSwapWeapon;}
+	
+	FORCEINLINE bool IsHoldingTheFlag() const {return bHoldingTheFlag;}
+	void SetHoldingTheFlag(const bool& bHolding);
 	
 	
 	/***
@@ -202,10 +208,11 @@ private:
 	void AttachActorToRightHand(AActor* ActorToAttach);
 	void AttachActorToLeftHand(AActor* ActorToAttach);
 	void AttachActorToBackpack(AActor* ActorToAttach);
+	void AttachFlagToLeftHand(AActor* Flag);
 	void UpdateCarriedAmmo();
 	void PlayEquippedWeaponSound(AWeapon* WeaponToEquip);
 	void ReloadEmptyWeapon();
-		
+	
 public:
 	UPROPERTY()
 	ABlasterCharacter* Character;
@@ -338,4 +345,7 @@ private:
 	
 	UPROPERTY(EditAnywhere, Category = "Combat|Movement")
 	float AimingFactor = 0.3f;
+	
+	UPROPERTY(ReplicatedUsing = OnRep_HoldingTheFlag)
+	bool bHoldingTheFlag = false;
 };
